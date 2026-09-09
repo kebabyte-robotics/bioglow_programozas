@@ -166,6 +166,12 @@ hub.system.set_stop_button(Button.BLUETOOTH)
 hub.display.number(1)
 voltage = hub.battery.voltage()
 print(voltage)
+
+async def futas_0(): 
+    hub.imu.reset_heading(0) 
+    feltet_bal.reset_angle(0)
+    feltet_jobb.reset_angle(0)
+    await wait(200)
  
 async def futas_1(): 
     hub.imu.reset_heading(0) 
@@ -191,8 +197,14 @@ async def futas_4():
     feltet_jobb.reset_angle(0)
     await wait(200)
 
+async def futas_5(): 
+    hub.imu.reset_heading(0) 
+    feltet_bal.reset_angle(0)
+    feltet_jobb.reset_angle(0)
+    await wait(200)
+ 
 futas = 0 
-futasok = [futas_1, futas_2, futas_3, futas_4] 
+futasok = [futas_0, futas_1, futas_2, futas_3, futas_4, futas_5] 
 max_futas = len(futasok) 
  
 while True: 
