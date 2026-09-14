@@ -26,7 +26,7 @@ elindult_timer = False #létrehozunk egy elindult_timer nevű változót aminek 
  
 async def egyenes(e_tavolsag, e_legkisebb_sebesseg=40, e_gyorsitas=40, e_korekcio=0.01, e_legnagyobb_sebesseg = 700, e_lassitas=80, timeout = None): #létrehozunk egy egyenes nevü függvényt, paramétereket adunk meg amit használni fogunk a függvényben, az e_tavolsagot, e_lassitast és a e_gyorsitast mm-be adjuk meg, az alap értékek csak átlagban működnek, azért async, hogy közben más mozgás is le tudjon futni
     if timeout != None: #ha a timeoutnak van értéke
-        timeout_watch = StopWatch() #akkor létrehoz egy stoppert
+        timeout_watch = StopWatch() #akkor létrehozunk egy timeout_watch nevű stoppert és ez később azt jelzi, hogy mennyi ideig van elakva a robot
         timeout_watch.reset() #akkor lenullázza a stoppert
         timeout_watch.resume() #akkor elindítja a stoppert
     global irany #engedélyezzük a függvénynek az irany változó használatát a függvényen belül
@@ -64,7 +64,7 @@ async def egyenes(e_tavolsag, e_legkisebb_sebesseg=40, e_gyorsitas=40, e_korekci
  
 async def kanyarodas(k_fok, k_legnagyobb_sebesseg=360, k_lassitas=80, k_legkisebb_sebesseg=50, timeout = None): #létrehozunk egy kanyarodas nevü függvényt, paramétereket adunk meg amit használni fogunk a függvényben, a fokot és e_lassitast motorfokokban-be adjuk meg, az alap értékek csak átlagban működnek, azért async, hogy közben más mozgás is le tudjon futni
     if timeout != None: #ha a timeoutnak van értéke
-        timeout_watch = StopWatch() #akkor létrehoz egy stoppert
+        timeout_watch = StopWatch() #akkor létrehozunk egy timeout_watch nevű stoppert és ez később azt jelzi, hogy mennyi ideig van elakva a robot
         timeout_watch.reset() #akkor lenullázza a stoppert
         timeout_watch.resume() #akkor elindítja a stoppert
     k_alap_fok = hub.imu.heading() #létrehozunk egy alap_fok nevű változót aminek a gyro értéket adunk és ez később azt jelzi, hogy ebből számoljuk a tévedést
@@ -95,7 +95,7 @@ async def kanyarodas(k_fok, k_legnagyobb_sebesseg=360, k_lassitas=80, k_legkiseb
 
 async def jobb_feltet(angle, speed=400, timeout=None): #létrehozunk egy jobb_feltet nevü függvényt, paramétereket adunk meg amit használni fogunk a függvényben, a fokot motorfokokban-be adjuk meg, az alap értékek csak átlagban működnek, azért async, hogy közben más mozgás is le tudjon futni
     if timeout != None: #ha a timeoutnak van értéke
-        timeout_watch = StopWatch() #akkor létrehoz egy stoppert
+        timeout_watch = StopWatch() #akkor létrehozunk egy timeout_watch nevű stoppert és ez később azt jelzi, hogy mennyi ideig van elakva a robot
         timeout_watch.reset() #akkor lenullázza a stoppert
         timeout_watch.resume() #akkor elindítja a stoppert
     feltet_jobb.run_angle(speed, angle, wait=False) #a feltet_jobb motoron lefutattják a speedet és anglet
@@ -107,7 +107,7 @@ async def jobb_feltet(angle, speed=400, timeout=None): #létrehozunk egy jobb_fe
  
 async def bal_feltet(angle, speed=400, timeout=None): #létrehozunk egy bal_feltet nevü függvényt, paramétereket adunk meg amit használni fogunk a függvényben, a fokot motorfokokban-be adjuk meg, az alap értékek csak átlagban működnek, azért async, hogy közben más mozgás is le tudjon futni
     if timeout != None: #ha a timeoutnak van értéke
-        timeout_watch = StopWatch() #akkor létrehoz egy stoppert
+        timeout_watch = StopWatch() #akkor létrehozunk egy timeout_watch nevű stoppert és ez később azt jelzi, hogy mennyi ideig van elakva a robot
         timeout_watch.reset() #akkor lenullázza a stoppert
         timeout_watch.resume() #akkor elindítja a stoppert
     feltet_bal.run_angle(speed, angle, wait=False) #a feltet_bal motoron lefutattják a speedet és anglet
@@ -117,7 +117,7 @@ async def bal_feltet(angle, speed=400, timeout=None): #létrehozunk egy bal_felt
         await wait(10) #várj 10 millimásodpercet
     feltet_bal.stop() #álljon le a feltét_bal motor
 
-async def drivebase_bezier(p0_x, p0_y, p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, alap_sebesseg=200):
+async def bezier-gorbe(p0_x, p0_y, p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, alap_sebesseg=200): #létrehozunk egy egyenes nevü függvényt, paramétereket adunk meg amit használni fogunk a függvényben, az e_tavolsagot, e_lassitast és a e_gyorsitast mm-be adjuk meg, az alap értékek csak átlagban működnek, azért async, hogy közben más mozgás is le tudjon futni
     global irany # Globális változó frissítése
     görbe_hossz_mm = 0
     utolso_x, utolso_y = p0_x, p0_y
@@ -209,51 +209,46 @@ while True: #elindítunk egy ciklust ami addig fut ameddig le nem állítjuk
     
     lenyomott = StopWatch() #létrehozunk egy lenyomott nevű stoppert és ez később azt jelzi, hogy mennyi ideig nyomjuk meg a gombot
     rezgett = False #létrehozunk egy rezgett nevű változót aminek False értéket adunk meg és ez később azt jelzi, hogy rezgett e a feltét
+    while hub.buttons.pressed(): #amig levan nyomva egy gomb
+        if lenyomott.time() > 500: #ha a lenyomott stopper átlépte a fél másodpercet
+            rezgett = True #a rezgett változót True-ra állítjuk
+            feltet_bal.run_angle(900, 45, wait=False) #a feltet_bal motoron lefutattják a speedet és anglet
+            feltet_jobb.run_angle(900, 45, wait=False)  #a feltet_jobb motoron lefutattják a speedet és anglet
+            while not feltet_bal.done(): #amig a feltet_bal nincs kész(nem futott le a mozgás)
+                wait(10) #várj 10 millimásodpercet
+            feltet_bal.run_angle(900, -45, wait=False) #a feltet_bal motoron lefutattják a speedet és anglet
+            feltet_jobb.run_angle(900, -45, wait=False) #a feltet_jobb motoron lefutattják a speedet és anglet
+            while not feltet_bal.done(): #amig a feltet_jobb nincs kész(nem futott le a mozgás)
+                wait(10) #várj 10 millimásodpercet
+        wait(10) #várj 10 millimásodpercet
     
-    # Rezgés vizsgálat
-    while hub.buttons.pressed():
-        if lenyomott.time() > 500:
-            rezgett = True
-            feltet_bal.run_angle(900, 45, wait=False)
-            feltet_jobb.run_angle(900, 45, wait=False)
-            while not feltet_bal.done(): wait(10)
-            
-            feltet_bal.run_angle(900, -45, wait=False)
-            feltet_jobb.run_angle(900, -45, wait=False)
-            while not feltet_bal.done(): wait(10)
-        wait(10)
-    
-    # Ha rezgett, ne lépjen be a menükezelésbe, csak folytassa a ciklust
-    if rezgett:
-        wait(200) # Várakozás az elengedésre
-        continue 
-    
-    if Button.RIGHT in megnyomva: 
-        futas = (futas + 1) % max_futas 
-    if Button.LEFT in megnyomva: 
-        futas = (futas - 1) % max_futas 
-    if Button.CENTER in megnyomva: 
-        irany = 0
-        hub.imu.reset_heading(0) 
-        
-        while Button.CENTER in hub.buttons.pressed(): 
-            wait(10)
-            
-        try: 
-            hub.system.set_stop_button(Button.CENTER) 
-            if elindult_timer == False and futas == 0:
-                meccs_ora = StopWatch()
-                meccs_ora.reset()
-                meccs_ora.resume()
-                elindult_timer = True
-            run_task(futasok[futas]())
-            futas = (futas + 1) % max_futas 
-        except SystemExit: 
-            while Button.CENTER in hub.buttons.pressed(): 
-                wait(10)
-            bal.stop() 
-            jobb.stop() 
-            feltet_bal.stop() 
-            feltet_jobb.stop() 
-        hub.system.set_stop_button(Button.BLUETOOTH) 
-    wait(10)
+    if rezgett == True: #ha a rezgett változó True
+        wait(200) #akkor várj 200 millimásodpercet
+        continue #ugorjon a következő részre
+    if Button.RIGHT in megnyomva: #ha a jobb gomb benne van a megnyomva tömbben
+        futas = (futas + 1) % max_futas #akkor a futás legyen egyenlő futás + 1 maradéka a maxfutassal
+    if Button.LEFT in megnyomva: #ha a bal gomb benne van a megnyomva tömbben
+        futas = (futas - 1) % max_futas #akkor a futás legyen egyenlő futás - 1 maradéka a maxfutassal
+    if Button.CENTER in megnyomva: #ha a középső gomb benne van a megnyomva tömbben
+        irany = 0 #az irányt beállítjuk 0-ra(reseteljük)
+        hub.imu.reset_heading(0) #a gyro értékét 0-ra állítjuk
+        while Button.CENTER in hub.buttons.pressed(): #amig a középső gomb meg van nyomva
+            wait(10) #várj 10 millimásodpercet
+        try: #próbáld meg lefutatni a következő kódrészletet, ha bármikor ki lép a kódból(systemexit) menj az exceptre
+            hub.system.set_stop_button(Button.CENTER) #beállítjuk a középső gombot stop gombra
+            if elindult_timer == False and futas == 0: #ha az elindult:timer False és a futás 0 van
+                meccs_ora = StopWatch() #létrehozunk egy meccs_ora nevű stoppert és ez később azt jelzi, hogy mennyi ideje fut a robot
+                meccs_ora.reset() #akkor lenullázza a stoppert
+                meccs_ora.resume() #akkor elindítja a stoppert
+                elindult_timer = True #akkor az elindult_timer legyen True
+            run_task(futasok[futas]()) #futassa le a futásoktömb futasadik elemét 
+            futas = (futas + 1) % max_futas #a futás legyen egyenlő futás + 1 maradéka a maxfutassal
+        except SystemExit: #ha volt systemexit(kilépett) a tryban jöjjön ide
+            while Button.CENTER in hub.buttons.pressed(): #amig a középső gomb meg van nyomva
+                wait(10) #várj 10 millimásodpercet
+            bal.stop() #álljon le a bal motor
+            jobb.stop() #álljon le a jobb motor
+            feltet_bal.stop() #álljon le a feltet_bal motor
+            feltet_jobb.stop() #álljon le a feltet_jobb motor
+        hub.system.set_stop_button(Button.BLUETOOTH) #beállítjuk a bluetooth gombot stop gombra
+    wait(10) #várj 10 millimásodpercet
