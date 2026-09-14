@@ -24,7 +24,7 @@ hub.imu.reset_heading(0) #a gyro értékét 0-ra állítjuk
 irany = 0 #létrehozunk egy irany nevű változót aminek 0 értéket adunk és ez később azt jelzi, hogy merre fel kéne néznie a robotnak
 elindult_timer = False #létrehozunk egy elindult_timer nevű változót aminek False értéket adunk és ez később azt jelzi, hogy a meccset időzítő timer elindult már
  
-async def egyenes(e_tavolsag, e_legkisebb_sebesseg=40, e_gyorsitas=40, e_korekcio=0.01, e_legnagyobb_sebesseg = 700, e_lassitas=80, timeout = None): #létrehozunk egy egyenes nevü függvényt, paramétereket adunk meg amit használni fogunk a függvényben, az e_tavolsagot, e_lassitast és a e_gyorsitast mm-be adjuk meg, az alap értékek csak átlagban működnek, azért async, hogy közben más mozgás is le tudjon futni
+async def egyenes(tavolsag, legkisebb_sebesseg=40, gyorsitas=40, korekcio=0.01, legnagyobb_sebesseg = 700, lassitas=80, timeout = None): #létrehozunk egy egyenes nevü függvényt, paramétereket adunk meg amit használni fogunk a függvényben, az tavolsagot, e_lassitast és a e_gyorsitast mm-be adjuk meg, az alap értékek csak átlagban működnek, azért async, hogy közben más mozgás is le tudjon futni
     if timeout != None: #ha a timeoutnak van értéke
         timeout_watch = StopWatch() #akkor létrehozunk egy timeout_watch nevű stoppert és ez később azt jelzi, hogy mennyi ideig van elakva a robot
         timeout_watch.reset() #akkor lenullázza a stoppert
@@ -32,62 +32,62 @@ async def egyenes(e_tavolsag, e_legkisebb_sebesseg=40, e_gyorsitas=40, e_korekci
     global irany #engedélyezzük a függvénynek az irany változó használatát a függvényen belül
     bal.reset_angle(0) #a bal szögét 0-ra állítjuk
     jobb.reset_angle(0) #a jobb szögét 0-ra állítjuk
-    e_tavolsag = e_tavolsag / 0.489 #a mm-ben megadott e_tavolsagot átváltjuk motor fokokra
-    e_gyorsitas /= 0.489 #a mm-ben megadott e_gyorsítástt átváltjuk motor fokokra
-    e_lassitas /= 0.489 #a mm-ben megadott e_lassítást átváltjuk motor fokokra
+    tavolsag = tavolsag / 0.489 #a mm-ben megadott tavolsagot átváltjuk motor fokokra
+    gyorsitas /= 0.489 #a mm-ben megadott e_gyorsítástt átváltjuk motor fokokra
+    lassitas /= 0.489 #a mm-ben megadott e_lassítást átváltjuk motor fokokra
     while True: #elindítunk egy ciklust ami addig fut ameddig le nem állítjuk
         if timeout != None and timeout_watch.time() >= timeout: #ha van a timeoutnak értéke és a stopper átlépte ezt az értéket
             break #akkor lépjen ki a ciklusból           
-        e_megtett_tavolsag = (bal.angle()+jobb.angle()) / 2 #létrehozunk egy megtett_tavolsag nevű változót aminek jobb és bal motor szögének az átlagát adjuk értéknek és ez később azt jelzi, hogy mennyit haladt a robot
-        e_hatralevo_tavolsag = e_tavolsag - e_megtett_tavolsag #létrehozunk egy hatralevo_tavolsag nevű változót aminek tavolsag-megtett_tavolsag értéket adunk és ez később azt jelzi, hogy mennyi távolság van hátra
-        e_jelzo = e_hatralevo_tavolsag/abs(e_hatralevo_tavolsag) #létrehozunk egy jelzo nevű változót aminek hatralevo_tavolsag és annak az abszolut értékje osztva értéket adunk és ez később azt jelzi, hogy előre vagy hátra kell mennie a robotnak
-        e_megtett_tavolsag = abs(e_megtett_tavolsag) #az e_megtett_tavolsag abszolut értéke legyen az e_megtett_tavolsag, azért kell hogy pozitiv legyen és a jelző már eltárolta, hogy negativ vagy pozitiv és később pozitivan számolunk vele
-        e_hatralevo_tavolsag = abs(e_hatralevo_tavolsag) #az e_hatralevo_tavolsag abszolut értéke legyen az e_hatralevo_tavolsag, azért kell hogy pozitiv legyen és a jelző már eltárolta, hogy negativ vagy pozitiv és később pozitivan számolunk vele
-        if e_hatralevo_tavolsag < 3: #ha e_hatralevo_tavolsag kevesebb, mint 3 motorfok(ha már elég közel van a célhoz)
+        megtett_tavolsag = (bal.angle()+jobb.angle()) / 2 #létrehozunk egy megtett_tavolsag nevű változót aminek jobb és bal motor szögének az átlagát adjuk értéknek és ez később azt jelzi, hogy mennyit haladt a robot
+        hatralevo_tavolsag = tavolsag - megtett_tavolsag #létrehozunk egy hatralevo_tavolsag nevű változót aminek tavolsag-megtett_tavolsag értéket adunk és ez később azt jelzi, hogy mennyi távolság van hátra
+        jelzo = hatralevo_tavolsag/abs(hatralevo_tavolsag) #létrehozunk egy jelzo nevű változót aminek hatralevo_tavolsag és annak az abszolut értékje osztva értéket adunk és ez később azt jelzi, hogy előre vagy hátra kell mennie a robotnak
+        megtett_tavolsag = abs(megtett_tavolsag) #az megtett_tavolsag abszolut értéke legyen az megtett_tavolsag, azért kell hogy pozitiv legyen és a jelző már eltárolta, hogy negativ vagy pozitiv és később pozitivan számolunk vele
+        hatralevo_tavolsag = abs(hatralevo_tavolsag) #az hatralevo_tavolsag abszolut értéke legyen az hatralevo_tavolsag, azért kell hogy pozitiv legyen és a jelző már eltárolta, hogy negativ vagy pozitiv és később pozitivan számolunk vele
+        if hatralevo_tavolsag < 3: #ha hatralevo_tavolsag kevesebb, mint 3 motorfok(ha már elég közel van a célhoz)
             break #akkor lépjen ki a ciklusból
-        if e_hatralevo_tavolsag < e_lassitas : #ha az e_hatralevo_tavolsag kevesebb, mint az e_lassitas(ha már a lassításba van)
-            e_ratio = e_hatralevo_tavolsag / e_lassitas #akkor létrehozunk egy ratio nevű változót aminek hatralevo_tavolsag / lassitas értéket adunk és ez később azt jelzi, hogy milyen gyorsan és melyen mértékbe lassítson 
-            e_mostani_sebesseg = max(e_ratio * e_legnagyobb_sebesseg, e_legkisebb_sebesseg) * e_jelzo #akkor létrehozunk egy mostani_sebesseg nevű változót aminek a nagyobb értéket adunk jelzo * a kettő közül ratio*legnagyobb_sebesseg vagy legkisebb_sebesseg értéket adunk és ez később azt jelzi, hogy mennyire gyorsan menjen előre
-        elif e_megtett_tavolsag < e_gyorsitas: #ha nem az előző és a megtett_tavolsag kisebb, mint a gyorsitas(a gyorsitas szakaszban van)
-            e_ratio = e_megtett_tavolsag / e_gyorsitas #akkor létrehozunk egy ratio nevű változót aminek megtett_tavolsag / gyorsitas értéket adunk és ez később azt jelzi, hogy hogy milyen gyorsan és melyen mértékbe gyorsitson
-            e_mostani_sebesseg = max(e_ratio * e_legnagyobb_sebesseg, e_legkisebb_sebesseg) * e_jelzo #akkor létrehozunk egy mostani_sebesseg nevű változót aminek a nagyobb értéket adunk jelzo * a kettő közül ratio*legnagyobb_sebesseg vagy legkisebb_sebesseg értéket adunk és ez később azt jelzi, hogy mennyire gyorsan menjen előre
+        if hatralevo_tavolsag < lassitas : #ha az hatralevo_tavolsag kevesebb, mint az lassitas(ha már a lassításba van)
+            ratio = hatralevo_tavolsag / lassitas #akkor létrehozunk egy ratio nevű változót aminek hatralevo_tavolsag / lassitas értéket adunk és ez később azt jelzi, hogy milyen gyorsan és melyen mértékbe lassítson 
+            mostani_sebesseg = max(ratio * legnagyobb_sebesseg, legkisebb_sebesseg) * jelzo #akkor létrehozunk egy mostani_sebesseg nevű változót aminek a nagyobb értéket adunk jelzo * a kettő közül ratio*legnagyobb_sebesseg vagy legkisebb_sebesseg értéket adunk és ez később azt jelzi, hogy mennyire gyorsan menjen előre
+        elif megtett_tavolsag < gyorsitas: #ha nem az előző és a megtett_tavolsag kisebb, mint a gyorsitas(a gyorsitas szakaszban van)
+            ratio = megtett_tavolsag / gyorsitas #akkor létrehozunk egy ratio nevű változót aminek megtett_tavolsag / gyorsitas értéket adunk és ez később azt jelzi, hogy hogy milyen gyorsan és melyen mértékbe gyorsitson
+            mostani_sebesseg = max(ratio * legnagyobb_sebesseg, legkisebb_sebesseg) * jelzo #akkor létrehozunk egy mostani_sebesseg nevű változót aminek a nagyobb értéket adunk jelzo * a kettő közül ratio*legnagyobb_sebesseg vagy legkisebb_sebesseg értéket adunk és ez később azt jelzi, hogy mennyire gyorsan menjen előre
         else: #ha semelyik előző
-            e_mostani_sebesseg = e_legnagyobb_sebesseg * e_jelzo #akkor létrehozunk egy mostani_sebesseg nevű változót aminek jelzo * legnagyobb_sebesseg értéket adunk és ez később azt jelzi, hogy mennyire gyorsan menjen előre
-        e_iranyelteres = (irany - hub.imu.heading()) * e_korekcio #létrehozunk egy iranyelteres nevű változót aminek a (irany - gyro értéke) * korekcio értéket adunk és ez később azt jelzi, hogy mennyit tévedett a robot
-        e_korekciomertek = e_mostani_sebesseg * e_iranyelteres * e_jelzo #létrehozunk egy korekcio_mertek nevű változót aminek a mostani_sebesseg * iranyelteres * jelzo értéket adunk és ez később azt jelzi, hogy milyen gyorsan és milyen kis mértékekben korigáljon
-        bal.run (e_mostani_sebesseg - e_korekciomertek) #a bal motoron lefutattják a mostani_sebesseg - korkciomertek
-        jobb.run(e_mostani_sebesseg + e_korekciomertek) #a jobb motoron lefutattják a mostani_sebesseg + korkciomertek
+            mostani_sebesseg = legnagyobb_sebesseg * jelzo #akkor létrehozunk egy mostani_sebesseg nevű változót aminek jelzo * legnagyobb_sebesseg értéket adunk és ez később azt jelzi, hogy mennyire gyorsan menjen előre
+        iranyelteres = (irany - hub.imu.heading()) * korekcio #létrehozunk egy iranyelteres nevű változót aminek a (irany - gyro értéke) * korekcio értéket adunk és ez később azt jelzi, hogy mennyit tévedett a robot
+        korekciomertek = mostani_sebesseg * iranyelteres * jelzo #létrehozunk egy korekcio_mertek nevű változót aminek a mostani_sebesseg * iranyelteres * jelzo értéket adunk és ez később azt jelzi, hogy milyen gyorsan és milyen kis mértékekben korigáljon
+        bal.run (mostani_sebesseg - korekciomertek) #a bal motoron lefutattják a mostani_sebesseg - korkciomertek
+        jobb.run(mostani_sebesseg + korekciomertek) #a jobb motoron lefutattják a mostani_sebesseg + korkciomertek
         await wait(10) #várj 10 millimásodpercet
     bal.stop() #álljon le a bal motor
     jobb.stop() #álljon le a jobb motor
     
  
-async def kanyarodas(k_fok, k_legnagyobb_sebesseg=360, k_lassitas=80, k_legkisebb_sebesseg=50, timeout = None): #létrehozunk egy kanyarodas nevü függvényt, paramétereket adunk meg amit használni fogunk a függvényben, a fokot és e_lassitast motorfokokban-be adjuk meg, az alap értékek csak átlagban működnek, azért async, hogy közben más mozgás is le tudjon futni
+async def kanyarodas(fok, legnagyobb_sebesseg=360, lassitas=80, legkisebb_sebesseg=50, timeout = None): #létrehozunk egy kanyarodas nevü függvényt, paramétereket adunk meg amit használni fogunk a függvényben, a fokot és e_lassitast motorfokokban-be adjuk meg, az alap értékek csak átlagban működnek, azért async, hogy közben más mozgás is le tudjon futni
     if timeout != None: #ha a timeoutnak van értéke
         timeout_watch = StopWatch() #akkor létrehozunk egy timeout_watch nevű stoppert és ez később azt jelzi, hogy mennyi ideig van elakva a robot
         timeout_watch.reset() #akkor lenullázza a stoppert
         timeout_watch.resume() #akkor elindítja a stoppert
-    k_alap_fok = hub.imu.heading() #létrehozunk egy alap_fok nevű változót aminek a gyro értéket adunk és ez később azt jelzi, hogy ebből számoljuk a tévedést
+    alap_fok = hub.imu.heading() #létrehozunk egy alap_fok nevű változót aminek a gyro értéket adunk és ez később azt jelzi, hogy ebből számoljuk a tévedést
     global irany #engedélyezzük a függvénynek az irany változó használatát a függvényen belül
-    k_cel_fok = irany+k_fok #létrehozunk egy cel_fok nevű változót aminek az irany + fok értéket adunk és ez később azt jelzi, hogy ebből számoljuk a tévedést, mert ez adja meg az elméleti fokot
-    irany = k_cel_fok #az irány változónak a cel_fok értéket adjuk meg
-    k_cel_fok -= k_alap_fok #a cel_fok legyen egyenlő a cel_fok - alap_fok, ez így korigálja hibát
+    cel_fok = irany+fok #létrehozunk egy cel_fok nevű változót aminek az irany + fok értéket adunk és ez később azt jelzi, hogy ebből számoljuk a tévedést, mert ez adja meg az elméleti fokot
+    irany = cel_fok #az irány változónak a cel_fok értéket adjuk meg
+    cel_fok -= alap_fok #a cel_fok legyen egyenlő a cel_fok - alap_fok, ez így korigálja hibát
     while True: #elindítunk egy ciklust ami addig fut ameddig le nem állítjuk
         if timeout != None and timeout_watch.time() >= timeout: #ha van a timeoutnak értéke és a stopper átlépte ezt az értéket
             break #akkor lépjen ki a ciklusból  
-        k_megtett_fokok = hub.imu.heading() - k_alap_fok #létrehozunk egy megtett_fokok nevű változót aminek a gyro - alap_fok értéket adunk és ez később azt jelzi, hogy ebből számoljuk a tévedést, mert ez lesz a megtett távolság
-        k_hatralevo_fokok = k_cel_fok - k_megtett_fokok #létrehozunk egy hatralevo_fokok nevű változót aminek a cel_fok - megtett_fokok értéket adunk és ez később azt jelzi, hogy ebből számoljuk a tévedést, mert ez lesz a hátralévő távolság
-        k_jelzo = k_hatralevo_fokok/abs(k_hatralevo_fokok) #létrehozunk egy jelzo nevű változót aminek hatralevo_fokok és annak az abszolut értékje osztva értéket adunk és ez később azt jelzi, hogy előre vagy hátra kell mennie a robotnak
-        k_hatralevo_fokok = abs(k_hatralevo_fokok) #az e_hatralevo_fokok abszolut értéke legyen az e_hatralevo_fokok, azért kell hogy pozitiv legyen és a jelző már eltárolta, hogy negativ vagy pozitiv és később pozitivan számolunk vele
-        if k_hatralevo_fokok <= 0.5: #ha e_hatralevo_fokok kevesebb, mint 3 motorfok(ha már elég közel van a célhoz)
+        megtett_fokok = hub.imu.heading() - alap_fok #létrehozunk egy megtett_fokok nevű változót aminek a gyro - alap_fok értéket adunk és ez később azt jelzi, hogy ebből számoljuk a tévedést, mert ez lesz a megtett távolság
+        hatralevo_fokok = cel_fok - megtett_fokok #létrehozunk egy hatralevo_fokok nevű változót aminek a cel_fok - megtett_fokok értéket adunk és ez később azt jelzi, hogy ebből számoljuk a tévedést, mert ez lesz a hátralévő távolság
+        jelzo = hatralevo_fokok/abs(hatralevo_fokok) #létrehozunk egy jelzo nevű változót aminek hatralevo_fokok és annak az abszolut értékje osztva értéket adunk és ez később azt jelzi, hogy előre vagy hátra kell mennie a robotnak
+        hatralevo_fokok = abs(hatralevo_fokok) #az e_hatralevo_fokok abszolut értéke legyen az e_hatralevo_fokok, azért kell hogy pozitiv legyen és a jelző már eltárolta, hogy negativ vagy pozitiv és később pozitivan számolunk vele
+        if hatralevo_fokok <= 0.5: #ha e_hatralevo_fokok kevesebb, mint 3 motorfok(ha már elég közel van a célhoz)
             break #akkor lépjen ki a ciklusból
-        if k_hatralevo_fokok < k_lassitas : #ha az hatralevo_fokok kevesebb, mint az lassitas(ha már a lassításba van)
-            k_ratio = k_hatralevo_fokok / k_lassitas #akkor létrehozunk egy ratio nevű változót aminek hatralevp_fokok / lassitas értéket adunk és ez később azt jelzi, hogy hogy milyen gyorsan és melyen mértékbe lassítson
-            k_mostani_sebesseg = max(k_ratio * k_legnagyobb_sebesseg, k_legkisebb_sebesseg) * k_jelzo #akkor létrehozunk egy mostani_sebesseg nevű változót aminek a nagyobb értéket adunk jelzo * a kettő közül ratio*legnagyobb_sebesseg vagy legkisebb_sebesseg értéket adunk és ez később azt jelzi, hogy mennyire gyorsan kanyarodjon
+        if hatralevo_fokok < lassitas : #ha az hatralevo_fokok kevesebb, mint az lassitas(ha már a lassításba van)
+            ratio = hatralevo_fokok / lassitas #akkor létrehozunk egy ratio nevű változót aminek hatralevp_fokok / lassitas értéket adunk és ez később azt jelzi, hogy hogy milyen gyorsan és melyen mértékbe lassítson
+            mostani_sebesseg = max(ratio * legnagyobb_sebesseg, legkisebb_sebesseg) * jelzo #akkor létrehozunk egy mostani_sebesseg nevű változót aminek a nagyobb értéket adunk jelzo * a kettő közül ratio*legnagyobb_sebesseg vagy legkisebb_sebesseg értéket adunk és ez később azt jelzi, hogy mennyire gyorsan kanyarodjon
         else: #ha nem az előző 
-            k_mostani_sebesseg = k_legnagyobb_sebesseg * k_jelzo #akkor létrehozunk egy mostani_sebesseg nevű változót aminek jelzo * legnagyobb_sebesseg értéket adunk és ez később azt jelzi, hogy mennyire gyorsan kanyarodjon
-        bal.run(-k_mostani_sebesseg) #a bal motoron lefutattják a -mostani_sebesseg
-        jobb.run(k_mostani_sebesseg) #a bal motoron lefutattják a mostani_sebesseg
+            mostani_sebesseg = legnagyobb_sebesseg * jelzo #akkor létrehozunk egy mostani_sebesseg nevű változót aminek jelzo * legnagyobb_sebesseg értéket adunk és ez később azt jelzi, hogy mennyire gyorsan kanyarodjon
+        bal.run(-mostani_sebesseg) #a bal motoron lefutattják a -mostani_sebesseg
+        jobb.run(mostani_sebesseg) #a bal motoron lefutattják a mostani_sebesseg
         await wait(10) #várj 10 millimásodpercet
     bal.stop() #álljon le a bal motor
     jobb.stop() #álljon le a jobb motor
@@ -117,7 +117,7 @@ async def bal_feltet(angle, speed=400, timeout=None): #létrehozunk egy bal_felt
         await wait(10) #várj 10 millimásodpercet
     feltet_bal.stop() #álljon le a feltét_bal motor
 
-async def bezier-gorbe(p0_x, p0_y, p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, alap_sebesseg=200): #létrehozunk egy egyenes nevü függvényt, paramétereket adunk meg amit használni fogunk a függvényben, az e_tavolsagot, e_lassitast és a e_gyorsitast mm-be adjuk meg, az alap értékek csak átlagban működnek, azért async, hogy közben más mozgás is le tudjon futni
+async def bezier-gorbe(p0_x, p0_y, p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, alap_sebesseg=200): #létrehozunk egy egyenes nevü függvényt, paramétereket adunk meg amit használni fogunk a függvényben, az tavolsagot, e_lassitast és a e_gyorsitast mm-be adjuk meg, az alap értékek csak átlagban működnek, azért async, hogy közben más mozgás is le tudjon futni
     global irany # Globális változó frissítése
     görbe_hossz_mm = 0
     utolso_x, utolso_y = p0_x, p0_y
