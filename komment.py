@@ -117,20 +117,21 @@ async def bal_feltet(angle, speed=400, timeout=None): #létrehozunk egy bal_felt
         await wait(10) #várj 10 millimásodpercet
     feltet_bal.stop() #álljon le a feltét_bal motor
 
-async def bezier-gorbe(p0_x, p0_y, p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, alap_sebesseg=200): #létrehozunk egy egyenes nevü függvényt, paramétereket adunk meg amit használni fogunk a függvényben, az tavolsagot, e_lassitast és a e_gyorsitast mm-be adjuk meg, az alap értékek csak átlagban működnek, azért async, hogy közben más mozgás is le tudjon futni
-    global irany # Globális változó frissítése
-    görbe_hossz_mm = 0
-    utolso_x, utolso_y = p0_x, p0_y
-    for i in range(1, 51):
-        temp_t = i / 50
-        tx = (1-temp_t)**3 * p0_x + 3*(1-temp_t)**2 * temp_t * p1_x + 3*(1-temp_t) * temp_t**2 * p2_x + temp_t**3 * p3_x
-        ty = (1-temp_t)**3 * p0_y + 3*(1-temp_t)**2 * temp_t * p1_y + 3*(1-temp_t) * temp_t**2 * p2_y + temp_t**3 * p3_y
-        görbe_hossz_mm += sqrt((tx - utolso_x)**2 + (ty - utolso_y)**2)
+async def bezier-gorbe(p0_x = 0, p0_y = 0, p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, sebesseg=200): #létrehozunk egy bezier-gorbe nevü függvényt, paramétereket adunk meg amit használni fogunk a függvényben, a sebességen kívül mindent koordináta rendszerben adjuk meg, az alap értékek csak átlagban működnek, azért async, hogy közben más mozgás is le tudjon futni, a p0_x és p0_y adja mega  kezdőpont koordinátáit, ami 0, a p3_x és p3_y adja meg a végpont koordinátáit, a többi pedig a vonzópontokat
+    global irany #engedélyezzük a függvénynek az irany változó használatát a függvényen belül
+    bezier_hossz = 0 #létrehozunk egy bezier_hossz nevű változót aminek 0 értéket adunk és ez később azt jelzi, hogy milyen hosszú a bezier-görbe
+    utolso_x = p0_x #létrehozunk egy utolso_x nevű változót aminek az első pont x koordinátája értéket adunk és ez később azt jelzi, hogy hol fejeztük be az utolsó szakaszt az 50-ből
+    utolso_y = p0_y #létrehozunk egy utolso_y nevű változót aminek az első pont y koordinátája értéket adunk és ez később azt jelzi, hogy hol fejeztük be az utolsó szakaszt az 50-ből
+    for i in range(1, 51): #fusson le a kód 50-szer(50 részre osztjuk a görbét)
+        szazalek = i / 50 #létrehozunk egy szazalek nevű változót aminek az i/50(0-1) értéket adunk és ez később azt jelzi, hogy hán százaléka van meg az útnak
+        tx = (1-szazalek)**3 * p0_x + 3*(1-szazalek)**2 * szazalek * p1_x + 3*(1-szazalek) * szazalek**2 * p2_x + szazalek**3 * p3_x
+        ty = (1-szazalek)**3 * p0_y + 3*(1-szazalek)**2 * szazalek * p1_y + 3*(1-szazalek) * szazalek**2 * p2_y + szazalek**3 * p3_y
+        bezier_hossz += sqrt((tx - utolso_x)**2 + (ty - utolso_y)**2)
         utolso_x, utolso_y = tx, ty
     db.reset()
     while True:
         megtett_ut_mm = db.distance()
-        t = megtett_ut_mm / görbe_hossz_mm
+        t = megtett_ut_mm / bezier_hossz
         if t >= 1.0:
             break
         tx = (1-t)**3 * p0_x + 3*(1-t)**2 * t * p1_x + 3*(1-t) * t**2 * p2_x + t**3 * p3_x
@@ -150,7 +151,7 @@ async def bezier-gorbe(p0_x, p0_y, p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, alap_sebe
         
         kanyar_sebesseg = szog_elteres * 4.0 
         kanyar_sebesseg = max(min(kanyar_sebesseg, 65), -65)
-        db.drive(speed=alap_sebesseg, turn_rate=kanyar_sebesseg)
+        db.drive(speed=sebesseg, turn_rate=kanyar_sebesseg)
         await wait(10)
     db.stop()
     irany = hub.imu.heading() # Bézier után frissítjük az irányt
