@@ -38,7 +38,7 @@ async def egyenes(tavolsag, legkisebb_sebesseg=40, gyorsitas=40, korekcio=0.01, 
     while True: #elindítunk egy ciklust ami addig fut ameddig le nem állítjuk
         if timeout != None and timeout_watch.time() >= timeout: #ha van a timeoutnak értéke és a stopper átlépte ezt az értéket
             break #akkor lépjen ki a ciklusból           
-        megtett_tavolsag = (bal.angle()+jobb.angle()) / 2 #létrehozunk egy megtett_tavolsag nevű változót aminek jobb és bal motor szögének az átlagát adjuk értéknek és ez később azt jelzi, hogy mennyit haladt a robot
+        megtett_tavolsag = -(bal.angle()+jobb.angle()) / 2 #létrehozunk egy megtett_tavolsag nevű változót aminek jobb és bal motor szögének az átlagának az ellentétjét(hogy másik irányba legyen az előre) adjuk értéknek és ez később azt jelzi, hogy mennyit haladt a robot
         hatralevo_tavolsag = tavolsag - megtett_tavolsag #létrehozunk egy hatralevo_tavolsag nevű változót aminek tavolsag-megtett_tavolsag értéket adunk és ez később azt jelzi, hogy mennyi távolság van hátra
         jelzo = hatralevo_tavolsag/abs(hatralevo_tavolsag) #létrehozunk egy jelzo nevű változót aminek hatralevo_tavolsag és annak az abszolut értékje osztva értéket adunk és ez később azt jelzi, hogy előre vagy hátra kell mennie a robotnak
         megtett_tavolsag = abs(megtett_tavolsag) #az megtett_tavolsag abszolut értéke legyen az megtett_tavolsag, azért kell hogy pozitiv legyen és a jelző már eltárolta, hogy negativ vagy pozitiv és később pozitivan számolunk vele
@@ -55,8 +55,8 @@ async def egyenes(tavolsag, legkisebb_sebesseg=40, gyorsitas=40, korekcio=0.01, 
             mostani_sebesseg = legnagyobb_sebesseg * jelzo #akkor létrehozunk egy mostani_sebesseg nevű változót aminek jelzo * legnagyobb_sebesseg értéket adunk és ez később azt jelzi, hogy mennyire gyorsan menjen előre
         iranyelteres = (irany - hub.imu.heading()) * korekcio #létrehozunk egy iranyelteres nevű változót aminek a (irany - gyro értéke) * korekcio értéket adunk és ez később azt jelzi, hogy mennyit tévedett a robot
         korekciomertek = mostani_sebesseg * iranyelteres * jelzo #létrehozunk egy korekcio_mertek nevű változót aminek a mostani_sebesseg * iranyelteres * jelzo értéket adunk és ez később azt jelzi, hogy milyen gyorsan és milyen kis mértékekben korigáljon
-        bal.run (mostani_sebesseg - korekciomertek) #a bal motoron lefutattják a mostani_sebesseg - korkciomertek
-        jobb.run(mostani_sebesseg + korekciomertek) #a jobb motoron lefutattják a mostani_sebesseg + korkciomertek
+        bal.run ((mostani_sebesseg + korekciomertek)*-1) #a bal motoron lefutattják a mostani_sebesseg + korkciomertek * -1 hogy másik irányba legyen az előre
+        jobb.run((mostani_sebesseg - korekciomertek)*-1) #a jobb motoron lefutattják a mostani_sebesseg  korkciomertek * -1 hogy másik irányba legyen az előre
         await wait(10) #várj 10 millimásodpercet
     bal.stop() #álljon le a bal motor
     jobb.stop() #álljon le a jobb motor
@@ -117,7 +117,7 @@ async def bal_feltet(angle, speed=400, timeout=None): #létrehozunk egy bal_felt
         await wait(10) #várj 10 millimásodpercet
     feltet_bal.stop() #álljon le a feltét_bal motor
 
-async def bezier-gorbe(p0_x = 0, p0_y = 0, p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, sebesseg=200): #létrehozunk egy bezier-gorbe nevü függvényt, paramétereket adunk meg amit használni fogunk a függvényben, a sebességen kívül mindent koordináta rendszerben adjuk meg, az alap értékek csak átlagban működnek, azért async, hogy közben más mozgás is le tudjon futni, a p0_x és p0_y adja mega  kezdőpont koordinátáit, ami 0, a p3_x és p3_y adja meg a végpont koordinátáit, a többi pedig a vonzópontokat
+async def bezier_gorbe(p0_x, p0_y, p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, sebesseg=200): #létrehozunk egy bezier-gorbe nevü függvényt, paramétereket adunk meg amit használni fogunk a függvényben, a sebességen kívül mindent koordináta rendszerben adjuk meg, az alap értékek csak átlagban működnek, azért async, hogy közben más mozgás is le tudjon futni, a p0_x és p0_y adja mega  kezdőpont koordinátáit, ami 0, a p3_x és p3_y adja meg a végpont koordinátáit, a többi pedig a vonzópontokat
     global irany #engedélyezzük a függvénynek az irany változó használatát a függvényen belül
     bezier_hossz = 0 #létrehozunk egy bezier_hossz nevű változót aminek 0 értéket adunk és ez később azt jelzi, hogy milyen hosszú a bezier-görbe
     utolso_x = p0_x #létrehozunk egy utolso_x nevű változót aminek az első pont x koordinátája értéket adunk és ez később azt jelzi, hogy hol fejeztük be az utolsó szakaszt az 50-ből
@@ -161,12 +161,6 @@ hub.display.number(1) #az agy írja ki az 1-es számot
 voltage = hub.battery.voltage() #létrehozunk egy voltage nevű változót aminek az agy töltöttségi szintjét adjuk értéknek és ez később azt jelzi, hogy mennyire van feltöltve a robot
 print(voltage) #az agy írja ki a voltage-ot
 
-async def futas_0(): #létrehozunk egy futas_0 nevü függvényt, azért async, hogy közben más mozgás is le tudjon futni
-    hub.imu.reset_heading(0) #a gyro értékét 0-ra állítjuk
-    bal.reset_angle(0) #a bal szögét 0-ra állítjuk
-    jobb.reset_angle(0) #a jobb szögét 0-ra állítjuk
-    await wait(200) #várj 200 millimásodpercet
- 
 async def futas_1(): #létrehozunk egy futas_1 nevü függvényt, azért async, hogy közben más mozgás is le tudjon futni
     hub.imu.reset_heading(0) #a gyro értékét 0-ra állítjuk
     bal.reset_angle(0) #a bal szögét 0-ra állítjuk
@@ -196,9 +190,15 @@ async def futas_5(): #létrehozunk egy futas_5 nevü függvényt, azért async, 
     bal.reset_angle(0) #a bal szögét 0-ra állítjuk
     jobb.reset_angle(0) #a jobb szögét 0-ra állítjuk
     await wait(200) #várj 200 millimásodpercet
- 
+
+async def futas_6(): #létrehozunk egy futas_0 nevü függvényt, azért async, hogy közben más mozgás is le tudjon futni
+    hub.imu.reset_heading(0) #a gyro értékét 0-ra állítjuk
+    bal.reset_angle(0) #a bal szögét 0-ra állítjuk
+    jobb.reset_angle(0) #a jobb szögét 0-ra állítjuk
+    await wait(200) #várj 200 millimásodpercet
+
 futas = 0 #létrehozunk egy futas nevű változót aminek 0 értéket adunk és ez később azt jelzi, hogy melyik futásnál tart a robot
-futasok = [futas_0, futas_1, futas_2, futas_3, futas_4, futas_5] #létrehozunk egy futasok nevű tömböt aminek futas_0, futas_1, futas_2, futas_3, futas_4, futas_5 értéket adunk és ez később azt jelzi, hogy melyik futások vannak
+futasok = [futas_1, futas_2, futas_3, futas_4, futas_5, futas_6] #létrehozunk egy futasok nevű tömböt aminek futas_0, futas_1, futas_2, futas_3, futas_4, futas_5 értéket adunk és ez később azt jelzi, hogy melyik futások vannak
 max_futas = len(futasok) #létrehozunk egy max_futas nevű változót aminek a futasok tömb nagyságát adjuk értéknek és ez később azt jelzi, hogy hány futásunk van és az 5. futásról a 0-ra menjen
  
 while True: #elindítunk egy ciklust ami addig fut ameddig le nem állítjuk
