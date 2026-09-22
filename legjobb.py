@@ -123,25 +123,26 @@ async def bezier_gorbe(p0_x, p0_y, p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, sebesseg=
     utolso_x = p0_x #létrehozunk egy utolso_x nevű változót aminek az első pont x koordinátája értéket adunk és ez később azt jelzi, hogy hol fejeztük be az utolsó szakaszt az 50-ből
     utolso_y = p0_y #létrehozunk egy utolso_y nevű változót aminek az első pont y koordinátája értéket adunk és ez később azt jelzi, hogy hol fejeztük be az utolsó szakaszt az 50-ből
     for i in range(1, 51): #fusson le a kód 50-szer(50 részre osztjuk a görbét)
-        szazalek = i / 50 #létrehozunk egy szazalek nevű változót aminek az i/50(0-1) értéket adunk és ez később azt jelzi, hogy hán százaléka van meg az útnak
-        tx = (1-szazalek)**3 * p0_x + 3*(1-szazalek)**2 * szazalek * p1_x + 3*(1-szazalek) * szazalek**2 * p2_x + szazalek**3 * p3_x
-        ty = (1-szazalek)**3 * p0_y + 3*(1-szazalek)**2 * szazalek * p1_y + 3*(1-szazalek) * szazalek**2 * p2_y + szazalek**3 * p3_y
-        bezier_hossz += sqrt((tx - utolso_x)**2 + (ty - utolso_y)**2)
-        utolso_x, utolso_y = tx, ty
-    db.reset()
-    while True:
+        szazalek = i / 50 #létrehozunk egy szazalek nevű változót aminek az i/50(0-1) értéket adunk és ez később azt jelzi, hogy hány százaléka van meg az útnak
+        szakasz_vege_x = (1-szazalek)**3 * p0_x + 3*(1-szazalek)**2 * szazalek * p1_x + 3*(1-szazalek) * szazalek**2 * p2_x + szazalek**3 * p3_x  #létrehozunk egy szakasz_vege_x nevű változót aminek a bezier görbe szakasz végénél lévő x értéket adunk értéket adunk és ez később azt jelzi, hogy hova kéne mennie a robotnak
+        szakasz_vege_y = (1-szazalek)**3 * p0_y + 3*(1-szazalek)**2 * szazalek * p1_y + 3*(1-szazalek) * szazalek**2 * p2_y + szazalek**3 * p3_y  #létrehozunk egy szakasz_vege_y nevű változót aminek a bezier görbe szakasz végénél lévő y értéket adunk értéket adunk és ez később azt jelzi, hogy hova kéne mennie a robotnak
+        bezier_hossz += sqrt((szakasz_vege_x - utolso_x)**2 + (szakasz_vege_y - utolso_y)**2) #a bezier hosszhoz hozzá adjuk a szakasz hosszát, itt pitagorasz tételt használunk, szakasz_vege_x - utolso_x(x tengely hossza=befogó) a négyzeten + szakasz_vege_y - utolso_y(y tengely hossza=befogó) a négyzeten és az egésznek a gyökét vesszük(a^2+b^2=c^2)
+        utolso_x = szakasz_vege_x #utolso_x legyen egyenlő szakasz_vege_x-szel
+        utolso_y = szakasz_vege_y #utolso_y legyen egyenlő szakasz_vege_y-szel
+    db.reset() #a db értékét 0-ra(reseteljük) állítjuk
+    while True: #elindítunk egy ciklust ami addig fut ameddig le nem állítjuk
         megtett_ut_mm = db.distance()
         t = megtett_ut_mm / bezier_hossz
         if t >= 1.0:
             break
-        tx = (1-t)**3 * p0_x + 3*(1-t)**2 * t * p1_x + 3*(1-t) * t**2 * p2_x + t**3 * p3_x
-        ty = (1-t)**3 * p0_y + 3*(1-t)**2 * t * p1_y + 3*(1-t) * t**2 * p2_y + t**3 * p3_y
+        szakasz_vege_x = (1-t)**3 * p0_x + 3*(1-t)**2 * t * p1_x + 3*(1-t) * t**2 * p2_x + t**3 * p3_x
+        szakasz_vege_y = (1-t)**3 * p0_y + 3*(1-t)**2 * t * p1_y + 3*(1-t) * t**2 * p2_y + t**3 * p3_y
         t_elore = min(t + 0.05, 1.0) 
         nx = (1-t_elore)**3 * p0_x + 3*(1-t_elore)**2 * t_elore * p1_x + 3*(1-t_elore) * t_elore**2 * p2_x + t_elore**3 * p3_x
         ny = (1-t_elore)**3 * p0_y + 3*(1-t_elore)**2 * t_elore * p1_y + 3*(1-t_elore) * t_elore**2 * p2_y + t_elore**3 * p3_y
         
-        dx = nx - tx
-        dy = ny - ty
+        dx = nx - szakasz_vege_x
+        dy = ny - szakasz_vege_y
         
         elvart_szog = -degrees(atan2(dx, dy))
         aktualis_szog = -hub.imu.heading()
