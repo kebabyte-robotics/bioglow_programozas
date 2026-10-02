@@ -3,7 +3,7 @@ from pybricks.pupdevices import * #beimportálja a motorokat
 from pybricks.parameters import * #beimportálja a paramétereket
 from pybricks.tools import * #beimportálja a toolsokat
 from umath import * #beimportálja a matekot a bezier görbéhez
-from pybricks.robotics import DriveBase #beimportálja a DriveBase-t a bezier görbéhez
+from pybricks.robotics import DriveBase #beimportálja a DriveBase-hatralevo_tavolsag a bezier görbéhez
  
 hub = PrimeHub() #az agyat elnevezi hubnak
 bal  = Motor(Port.B) #a motort ami a B portba van elnevezzük balnak és óra járásával megegyező irányba forog
@@ -16,7 +16,6 @@ bal.control.limits(2000, 5500) #beállítjuk a balnak a limitjeit: speed, accele
 jobb.control.limits(2000, 5000) #beállítjuk a jobbnak a limitjeit: speed, acceleration
 db = DriveBase(bal, jobb, wheel_diameter=56, axle_track=110) #a DriveBaset elnevezzük dbnek és meg adjuk neki a 2 motort, majd a kerék átmérőt és a kerekek közti távolságot
 db.use_gyro(True) #bekapcsolja a dbnél a gyroszkóp alapú vezérlést
-
 while not hub.imu.ready(): #ameddig a gyro nincs kalibrálva/kész
     hub.display.char("x") #addig az agy írjon ki egy x-et
  
@@ -117,45 +116,53 @@ async def bal_feltet(angle, speed=400, timeout=None): #létrehozunk egy bal_felt
         await wait(10) #várj 10 millimásodpercet
     feltet_bal.stop() #álljon le a feltét_bal motor
 
-async def bezier_gorbe(p0_x, p0_y, p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, sebesseg=200): #létrehozunk egy bezier-gorbe nevü függvényt, paramétereket adunk meg amit használni fogunk a függvényben, a sebességen kívül mindent koordináta rendszerben adjuk meg, az alap értékek csak átlagban működnek, azért async, hogy közben más mozgás is le tudjon futni, a p0_x és p0_y adja mega  kezdőpont koordinátáit, ami 0, a p3_x és p3_y adja meg a végpont koordinátáit, a többi pedig a vonzópontokat
+async def bezier_gorbe(p0_x, p0_y, p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, sebesseg=200, megforditva=True): #létrehozunk egy bezier-gorbe nevü függvényt, paramétereket adunk meg amit használni fogunk a függvényben, a sebességen kívül és a megforditva kívül mindent koordináta rendszerben adjuk meg, az alap értékek csak átlagban működnek, azért async, hogy közben más mozgás is le tudjon futni, a p0_x és p0_y adja mega  kezdőpont koordinátáit, ami 0, a p3_x és p3_y adja meg a végpont koordinátáit, a többi pedig a vonzópontokat, a megfordítva az irányát jelzi
     global irany #engedélyezzük a függvénynek az irany változó használatát a függvényen belül
+    if megforditva == True: #ha a megfordítva True
+        p0_x, p3_x = p3_x, p0_x #felcseréljük a p0_x-et és a p3_x-et
+        p0_y, p3_y = p3_y, p0_y #felcseréljük a p0_y-et és a p3_y-et
+        p1_x, p2_x = p2_x, p1_x #felcseréljük a p1_x-et és a p2_x-et
+        p1_y, p2_y = p2_y, p1_y #felcseréljük a p1_y-et és a p2_y-et
     bezier_hossz = 0 #létrehozunk egy bezier_hossz nevű változót aminek 0 értéket adunk és ez később azt jelzi, hogy milyen hosszú a bezier-görbe
     utolso_x = p0_x #létrehozunk egy utolso_x nevű változót aminek az első pont x koordinátája értéket adunk és ez később azt jelzi, hogy hol fejeztük be az utolsó szakaszt az 50-ből
     utolso_y = p0_y #létrehozunk egy utolso_y nevű változót aminek az első pont y koordinátája értéket adunk és ez később azt jelzi, hogy hol fejeztük be az utolsó szakaszt az 50-ből
     for i in range(1, 51): #fusson le a kód 50-szer(50 részre osztjuk a görbét)
         szazalek = i / 50 #létrehozunk egy szazalek nevű változót aminek az i/50(0-1) értéket adunk és ez később azt jelzi, hogy hány százaléka van meg az útnak
-        szakasz_vege_x = (1-szazalek)**3 * p0_x + 3*(1-szazalek)**2 * szazalek * p1_x + 3*(1-szazalek) * szazalek**2 * p2_x + szazalek**3 * p3_x  #létrehozunk egy szakasz_vege_x nevű változót aminek a bezier görbe szakasz végénél lévő x értéket adunk értéket adunk és ez később azt jelzi, hogy hova kéne mennie a robotnak
-        szakasz_vege_y = (1-szazalek)**3 * p0_y + 3*(1-szazalek)**2 * szazalek * p1_y + 3*(1-szazalek) * szazalek**2 * p2_y + szazalek**3 * p3_y  #létrehozunk egy szakasz_vege_y nevű változót aminek a bezier görbe szakasz végénél lévő y értéket adunk értéket adunk és ez később azt jelzi, hogy hova kéne mennie a robotnak
+        szakasz_vege_x = (1-szazalek)**3 * p0_x + 3*(1-szazalek)**2 * szazalek * p1_x + 3*(1-szazalek) * szazalek**2 * p2_x + szazalek**3 * p3_x #létrehozunk egy szakasz_vege_x nevű változót aminek a bezier görbe szakasz végénél lévő x értéket adunk értéket adunk és ez később azt jelzi, hogy hova kéne mennie a robotnak
+        szakasz_vege_y = (1-szazalek)**3 * p0_y + 3*(1-szazalek)**2 * szazalek * p1_y + 3*(1-szazalek) * szazalek**2 * p2_y + szazalek**3 * p3_y #létrehozunk egy szakasz_vege_y nevű változót aminek a bezier görbe szakasz végénél lévő y értéket adunk értéket adunk és ez később azt jelzi, hogy hova kéne mennie a robotnak
         bezier_hossz += sqrt((szakasz_vege_x - utolso_x)**2 + (szakasz_vege_y - utolso_y)**2) #a bezier hosszhoz hozzá adjuk a szakasz hosszát, itt pitagorasz tételt használunk, szakasz_vege_x - utolso_x(x tengely hossza=befogó) a négyzeten + szakasz_vege_y - utolso_y(y tengely hossza=befogó) a négyzeten és az egésznek a gyökét vesszük(a^2+b^2=c^2)
         utolso_x = szakasz_vege_x #utolso_x legyen egyenlő szakasz_vege_x-szel
         utolso_y = szakasz_vege_y #utolso_y legyen egyenlő szakasz_vege_y-szel
     db.reset() #a db értékét 0-ra(reseteljük) állítjuk
     while True: #elindítunk egy ciklust ami addig fut ameddig le nem állítjuk
-        megtett_ut_mm = db.distance()
-        t = megtett_ut_mm / bezier_hossz
-        if t >= 1.0:
-            break
-        szakasz_vege_x = (1-t)**3 * p0_x + 3*(1-t)**2 * t * p1_x + 3*(1-t) * t**2 * p2_x + t**3 * p3_x
-        szakasz_vege_y = (1-t)**3 * p0_y + 3*(1-t)**2 * t * p1_y + 3*(1-t) * t**2 * p2_y + t**3 * p3_y
-        t_elore = min(t + 0.05, 1.0) 
-        nx = (1-t_elore)**3 * p0_x + 3*(1-t_elore)**2 * t_elore * p1_x + 3*(1-t_elore) * t_elore**2 * p2_x + t_elore**3 * p3_x
-        ny = (1-t_elore)**3 * p0_y + 3*(1-t_elore)**2 * t_elore * p1_y + 3*(1-t_elore) * t_elore**2 * p2_y + t_elore**3 * p3_y
-        
-        dx = nx - szakasz_vege_x
-        dy = ny - szakasz_vege_y
-        
-        elvart_szog = -degrees(atan2(dx, dy))
-        aktualis_szog = -hub.imu.heading()
-        
-        szog_elteres = elvart_szog - aktualis_szog
-        szog_elteres = (szog_elteres + 180) % 360 - 180
-        
-        kanyar_sebesseg = szog_elteres * 4.0 
-        kanyar_sebesseg = max(min(kanyar_sebesseg, 65), -65)
-        db.drive(speed=sebesseg, turn_rate=kanyar_sebesseg)
-        await wait(10)
-    db.stop()
-    irany = hub.imu.heading() # Bézier után frissítjük az irányt
+        megtett_ut = db.distance() #létrehozunk egy megtett_ut nevű változót aminek a db értékét adjuk értéknek és ez később azt jelzi, hogy mennyit haladtunk
+        megtett_arany = abs(megtett_ut) / bezier_hossz #létrehozunk egy megtett_arany nevű változót aminek a megtett_ut abszolútértéke osztva a bezier_hosszal értékét adjuk értéknek és ez később azt jelzi, hogy milyen aránt jöttünk
+        if megtett_arany >= 1.0: #ha a megtett_arany nagyobb vagy egyenlő mint 1(nem ért végig)
+            break #akkor lépjen ki a ciklusból  
+        szakasz_vege_x = (1-megtett_arany)**3 * p0_x + 3*(1-megtett_arany)**2 * megtett_arany * p1_x + 3*(1-megtett_arany) * megtett_arany**2 * p2_x + megtett_arany**3 * p3_x #a szakasz_vege_x a bezier görbe szakasz végénél lévő x értéket adjuk meg értéknek
+        szakasz_vege_y = (1-megtett_arany)**3 * p0_y + 3*(1-megtett_arany)**2 * megtett_arany * p1_y + 3*(1-megtett_arany) * megtett_arany**2 * p2_y + megtett_arany**3 * p3_y #a szakasz_vege_y a bezier görbe szakasz végénél lévő y értéket adjuk meg értéknek
+        kovetkezo_arany = min(megtett_arany + 0.05, 1.0) #létrehozunk egy kovetkezo_arany nevű változót aminek az kevesebbet a megtett_arany + 0,05 vagy 1.0 értéket adunk és ez később azt jelzi, hogy a következő szakasznak mi lesz az aránya
+        kovetkezo_x = (1-kovetkezo_arany)**3 * p0_x + 3*(1-kovetkezo_arany)**2 * kovetkezo_arany * p1_x + 3*(1-kovetkezo_arany) * kovetkezo_arany**2 * p2_x + kovetkezo_arany**3 * p3_x #létrehozunk egy kovetkezo_x nevű változót aminek a bezier görbe következő végénél lévő x értéket adjuk értéknek és ez később azt jelzi, hogy hova kéne mennie a robotnak
+        kovetkezo_y = (1-kovetkezo_arany)**3 * p0_y + 3*(1-kovetkezo_arany)**2 * kovetkezo_arany * p1_y + 3*(1-kovetkezo_arany) * kovetkezo_arany**2 * p2_y + kovetkezo_arany**3 * p3_y #létrehozunk egy kovetkezo_y nevű változót aminek a bezier görbe következő végénél lévő y értéket adjuk értéknek és ez később azt jelzi, hogy hova kéne mennie a robotnak
+        tavolsag_x = kovetkezo_x - szakasz_vege_x #létrehozunk egy tavolsag_x nevű változót aminek a kovetkezo_x - szakasz_vege_x értéket adunk és ez később azt jelzi, hogy mennyit kell menni az x tengelyen
+        tavolsag_y = kovetkezo_y - szakasz_vege_y #létrehozunk egy tavolsag_y nevű változót aminek a kovetkezo_y - szakasz_vege_y értéket adunk és ez később azt jelzi, hogy mennyit kell menni az y tengelyen
+        if megforditva == True: #ha a megfordítva True
+            elvart_szog = -degrees(atan2(-tavolsag_x, -tavolsag_y)) #létrehozunk egy elvart_szog nevű változót aminek a tavolsag_x és tavolsag_y ellentetjeiből radiant számolunk, amit a degrees átvált fokokraés az egész -, mert a robot és a matek másik irányba értéket adunk és ez később azt jelzi, hogy merre kéne néznie/mennie a robotnak
+        else: #ha nem az előző
+            elvart_szog = -degrees(atan2(tavolsag_x, tavolsag_y)) #létrehozunk egy elvart_szog nevű változót aminek a tavolsag_x-ból és tavolsag_y-ból radiant számolunk, amit a degrees átvált fokokra és az egész -, mert a robot és a matek másik irányba értéket adunk és ez később azt jelzi, hogy merre kéne néznie/mennie a robotnak
+        aktualis_szog = -hub.imu.heading() #létrehozunk egy aktualis_szog nevű változót aminek a gyro ellentétét értéket adunk és ez később azt jelzi, hogy mennyit téved a robot
+        szog_elteres = elvart_szog - aktualis_szog #létrehozunk egy szog_elteres nevű változót aminek a elvart_szog - aktualis_szog értéket adunk és ez később azt jelzi, hogy mennyit tévedt a robot
+        szog_elteres = (szog_elteres + 180) % 360 - 180 #a szog_elteresnek a szogleteres + 180 maradéka 360 - 180, emiatt a legközelebb kanyarodik
+        kanyar_sebesseg = szog_elteres * 4.0 #létrehozunk egy kanyar_sebesseg nevű változót aminek a szog_elteres * 4 értéket adunk és ez később azt jelzi, hogy mennyivel korigáljon a robot
+        kanyar_sebesseg = max(min(kanyar_sebesseg, 65), -65) #a kanyar_sebesseg legyen -65 - 65 között
+        if megforditva == True: #ha a megfordítva True
+            aktualis_sebesseg = -sebesseg #létrehozunk egy aktualis_sebesseg nevű változót aminek a sebesség ellentétjét adunk és ez később azt jelzi, hogy mennyivel menjen a robot
+        else: #ha nem az előző
+            aktualis_sebesseg = sebesseg #létrehozunk egy aktualis_sebesseg nevű változót aminek a sebesség adunk és ez később azt jelzi, hogy mennyivel menjen a robot
+        db.drive(speed=aktualis_sebesseg, turn_rate=kanyar_sebesseg) #a db futassuk le az aktuális sebességet, és a kanyarodási ráta legyen a kanyar_sebesseg
+        await wait(10) #várj 10 millimásodpercet
+    db.stop() #álljon le a db(DriveBase)
+    irany = hub.imu.heading() #az irány legyen a gyro értéke
 
 hub.system.set_stop_button(Button.BLUETOOTH) #beállítjuk a bluetooth gombot stop gombnak
 hub.display.number(1) #az agy írja ki az 1-es számot
@@ -167,7 +174,8 @@ async def futas_1(): #létrehozunk egy futas_1 nevü függvényt, azért async, 
     bal.reset_angle(0) #a bal szögét 0-ra állítjuk
     jobb.reset_angle(0) #a jobb szögét 0-ra állítjuk
     await wait(200) #várj 200 millimásodpercet
-    
+    await bezier_gorbe(0, 0, 100, 500, 200, 10, 300, 50, 200, True)
+
 async def futas_2(): #létrehozunk egy futas_2 nevü függvényt, azért async, hogy közben más mozgás is le tudjon futni
     hub.imu.reset_heading(0) #a gyro értékét 0-ra állítjuk
     bal.reset_angle(0) #a bal szögét 0-ra állítjuk
