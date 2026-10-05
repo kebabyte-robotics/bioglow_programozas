@@ -1,264 +1,264 @@
-from pybricks.hubs import * #beimportálja az agyat
-from pybricks.pupdevices import * #beimportálja a motorokat
-from pybricks.parameters import * #beimportálja a paramétereket
-from pybricks.tools import * #beimportálja a toolsokat
-from umath import * #beimportálja a matekot a bezier görbéhez
-from pybricks.robotics import DriveBase #beimportálja a DriveBase-hatralevo_tavolsag a bezier görbéhez
+from pybricks.hubs import * 
+from pybricks.pupdevices import * 
+from pybricks.parameters import *
+from pybricks.tools import * 
+from umath import * 
+from pybricks.robotics import DriveBase 
  
-hub = PrimeHub() #az agyat elnevezi hubnak
-bal  = Motor(Port.B) #a motort ami a B portba van elnevezzük balnak és óra járásával megegyező irányba forog
-jobb = Motor(Port.F, Direction.COUNTERCLOCKWISE) #a motort ami az F portba van elnevezzük balnak és óra járásával ellentétes irányba forog
-feltet_bal = Motor(Port.A) #a feltét motort ami az E portba van elnevezzük feltet_balnak és a óra járásával megegyező irányba forog
-feltet_jobb = Motor(Port.E)  #a feltét motort ami az A portba van elnevezzük feltet_jobbnak és a óra járásával megegyező irányba forog
-feltet_bal.control.limits(1000, 10000) #beállítjuk a feltet_balnak a limitjeit: speed, acceleration
-feltet_jobb.control.limits(1000, 6500) #beállítjuk a feltet_jobbnak a limitjeit: speed, acceleration
-bal.control.limits(2000, 5500) #beállítjuk a balnak a limitjeit: speed, acceleration
-jobb.control.limits(2000, 5000) #beállítjuk a jobbnak a limitjeit: speed, acceleration
-db = DriveBase(bal, jobb, wheel_diameter=56, axle_track=110) #a DriveBaset elnevezzük dbnek és meg adjuk neki a 2 motort, majd a kerék átmérőt és a kerekek közti távolságot
-db.use_gyro(True) #bekapcsolja a dbnél a gyroszkóp alapú vezérlést
-while not hub.imu.ready(): #ameddig a gyro nincs kalibrálva/kész
-    hub.display.char("x") #addig az agy írjon ki egy x-et
+hub = PrimeHub()
+bal  = Motor(Port.B) 
+jobb = Motor(Port.F, Direction.COUNTERCLOCKWISE) 
+feltet_bal = Motor(Port.A) 
+feltet_jobb = Motor(Port.E)  
+feltet_bal.control.limits(1000, 10000) 
+feltet_jobb.control.limits(1000, 6500) 
+bal.control.limits(2000, 5500) 
+jobb.control.limits(2000, 5000) 
+db = DriveBase(bal, jobb, wheel_diameter=56, axle_track=110) 
+db.use_gyro(True) 
+while not hub.imu.ready(): 
+    hub.display.char("x") 
  
-hub.imu.reset_heading(0) #a gyro értékét 0-ra állítjuk
-irany = 0 #létrehozunk egy irany nevű változót aminek 0 értéket adunk és ez később azt jelzi, hogy merre fel kéne néznie a robotnak
-elindult_timer = False #létrehozunk egy elindult_timer nevű változót aminek False értéket adunk és ez később azt jelzi, hogy a meccset időzítő timer elindult már
+hub.imu.reset_heading(0) 
+irany = 0 
+elindult_timer = False 
  
-async def egyenes(tavolsag, legkisebb_sebesseg=40, gyorsitas=40, korekcio=0.01, legnagyobb_sebesseg = 700, lassitas=80, timeout = None): #létrehozunk egy egyenes nevü függvényt, paramétereket adunk meg amit használni fogunk a függvényben, az tavolsagot, e_lassitast és a e_gyorsitast mm-be adjuk meg, az alap értékek csak átlagban működnek, azért async, hogy közben más mozgás is le tudjon futni
-    if timeout != None: #ha a timeoutnak van értéke
-        timeout_watch = StopWatch() #akkor létrehozunk egy timeout_watch nevű stoppert és ez később azt jelzi, hogy mennyi ideig van elakva a robot
-        timeout_watch.reset() #akkor lenullázza a stoppert
-        timeout_watch.resume() #akkor elindítja a stoppert
-    global irany #engedélyezzük a függvénynek az irany változó használatát a függvényen belül
-    bal.reset_angle(0) #a bal szögét 0-ra állítjuk
-    jobb.reset_angle(0) #a jobb szögét 0-ra állítjuk
-    tavolsag = tavolsag / 0.489 #a mm-ben megadott tavolsagot átváltjuk motor fokokra
-    gyorsitas /= 0.489 #a mm-ben megadott e_gyorsítástt átváltjuk motor fokokra
-    lassitas /= 0.489 #a mm-ben megadott e_lassítást átváltjuk motor fokokra
-    while True: #elindítunk egy ciklust ami addig fut ameddig le nem állítjuk
-        if timeout != None and timeout_watch.time() >= timeout: #ha van a timeoutnak értéke és a stopper átlépte ezt az értéket
-            break #akkor lépjen ki a ciklusból           
-        megtett_tavolsag = -(bal.angle()+jobb.angle()) / 2 #létrehozunk egy megtett_tavolsag nevű változót aminek jobb és bal motor szögének az átlagának az ellentétjét(hogy másik irányba legyen az előre) adjuk értéknek és ez később azt jelzi, hogy mennyit haladt a robot
-        hatralevo_tavolsag = tavolsag - megtett_tavolsag #létrehozunk egy hatralevo_tavolsag nevű változót aminek tavolsag-megtett_tavolsag értéket adunk és ez később azt jelzi, hogy mennyi távolság van hátra
-        jelzo = hatralevo_tavolsag/abs(hatralevo_tavolsag) #létrehozunk egy jelzo nevű változót aminek hatralevo_tavolsag és annak az abszolut értékje osztva értéket adunk és ez később azt jelzi, hogy előre vagy hátra kell mennie a robotnak
-        megtett_tavolsag = abs(megtett_tavolsag) #az megtett_tavolsag abszolut értéke legyen az megtett_tavolsag, azért kell hogy pozitiv legyen és a jelző már eltárolta, hogy negativ vagy pozitiv és később pozitivan számolunk vele
-        hatralevo_tavolsag = abs(hatralevo_tavolsag) #az hatralevo_tavolsag abszolut értéke legyen az hatralevo_tavolsag, azért kell hogy pozitiv legyen és a jelző már eltárolta, hogy negativ vagy pozitiv és később pozitivan számolunk vele
-        if hatralevo_tavolsag < 3: #ha hatralevo_tavolsag kevesebb, mint 3 motorfok(ha már elég közel van a célhoz)
-            break #akkor lépjen ki a ciklusból
-        if hatralevo_tavolsag < lassitas : #ha az hatralevo_tavolsag kevesebb, mint az lassitas(ha már a lassításba van)
-            ratio = hatralevo_tavolsag / lassitas #akkor létrehozunk egy ratio nevű változót aminek hatralevo_tavolsag / lassitas értéket adunk és ez később azt jelzi, hogy milyen gyorsan és melyen mértékbe lassítson 
-            mostani_sebesseg = max(ratio * legnagyobb_sebesseg, legkisebb_sebesseg) * jelzo #akkor létrehozunk egy mostani_sebesseg nevű változót aminek a nagyobb értéket adunk jelzo * a kettő közül ratio*legnagyobb_sebesseg vagy legkisebb_sebesseg értéket adunk és ez később azt jelzi, hogy mennyire gyorsan menjen előre
-        elif megtett_tavolsag < gyorsitas: #ha nem az előző és a megtett_tavolsag kisebb, mint a gyorsitas(a gyorsitas szakaszban van)
-            ratio = megtett_tavolsag / gyorsitas #akkor létrehozunk egy ratio nevű változót aminek megtett_tavolsag / gyorsitas értéket adunk és ez később azt jelzi, hogy hogy milyen gyorsan és melyen mértékbe gyorsitson
-            mostani_sebesseg = max(ratio * legnagyobb_sebesseg, legkisebb_sebesseg) * jelzo #akkor létrehozunk egy mostani_sebesseg nevű változót aminek a nagyobb értéket adunk jelzo * a kettő közül ratio*legnagyobb_sebesseg vagy legkisebb_sebesseg értéket adunk és ez később azt jelzi, hogy mennyire gyorsan menjen előre
-        else: #ha semelyik előző
-            mostani_sebesseg = legnagyobb_sebesseg * jelzo #akkor létrehozunk egy mostani_sebesseg nevű változót aminek jelzo * legnagyobb_sebesseg értéket adunk és ez később azt jelzi, hogy mennyire gyorsan menjen előre
-        iranyelteres = (irany - hub.imu.heading()) * korekcio #létrehozunk egy iranyelteres nevű változót aminek a (irany - gyro értéke) * korekcio értéket adunk és ez később azt jelzi, hogy mennyit tévedett a robot
-        korekciomertek = mostani_sebesseg * iranyelteres * jelzo #létrehozunk egy korekcio_mertek nevű változót aminek a mostani_sebesseg * iranyelteres * jelzo értéket adunk és ez később azt jelzi, hogy milyen gyorsan és milyen kis mértékekben korigáljon
-        bal.run ((mostani_sebesseg + korekciomertek)*-1) #a bal motoron lefutattják a mostani_sebesseg + korkciomertek * -1 hogy másik irányba legyen az előre
-        jobb.run((mostani_sebesseg - korekciomertek)*-1) #a jobb motoron lefutattják a mostani_sebesseg  korkciomertek * -1 hogy másik irányba legyen az előre
-        await wait(10) #várj 10 millimásodpercet
-    bal.stop() #álljon le a bal motor
-    jobb.stop() #álljon le a jobb motor
+async def egyenes(tavolsag, legkisebb_sebesseg=40, gyorsitas=40, korekcio=0.01, legnagyobb_sebesseg = 700, lassitas=80, timeout = None):
+    if timeout != None:
+        timeout_watch = StopWatch()
+        timeout_watch.reset()
+        timeout_watch.resume()
+    global irany
+    bal.reset_angle(0)
+    jobb.reset_angle(0)
+    tavolsag = tavolsag / 0.489
+    gyorsitas /= 0.489
+    lassitas /= 0.489
+    while True:
+        if timeout != None and timeout_watch.time() >= timeout:
+            break
+        megtett_tavolsag = -(bal.angle()+jobb.angle()) / 2
+        hatralevo_tavolsag = tavolsag - megtett_tavolsag
+        jelzo = hatralevo_tavolsag/abs(hatralevo_tavolsag)
+        megtett_tavolsag = abs(megtett_tavolsag)
+        hatralevo_tavolsag = abs(hatralevo_tavolsag)
+        if hatralevo_tavolsag < 3:
+            break
+        if hatralevo_tavolsag < lassitas :
+            ratio = hatralevo_tavolsag / lassitas
+            mostani_sebesseg = max(ratio * legnagyobb_sebesseg, legkisebb_sebesseg) * jelzo
+        elif megtett_tavolsag < gyorsitas:
+            ratio = megtett_tavolsag / gyorsitas
+            mostani_sebesseg = max(ratio * legnagyobb_sebesseg, legkisebb_sebesseg) * jelzo
+        else:
+            mostani_sebesseg = legnagyobb_sebesseg * jelzo
+        iranyelteres = (irany - hub.imu.heading()) * korekcio
+        korekciomertek = mostani_sebesseg * iranyelteres * jelzo
+        bal.run ((mostani_sebesseg + korekciomertek)*-1)
+        jobb.run((mostani_sebesseg - korekciomertek)*-1)
+        await wait(10)
+    bal.stop()
+    jobb.stop()
     
  
-async def kanyarodas(fok, legnagyobb_sebesseg=360, lassitas=80, legkisebb_sebesseg=50, timeout = None): #létrehozunk egy kanyarodas nevü függvényt, paramétereket adunk meg amit használni fogunk a függvényben, a fokot és e_lassitast motorfokokban-be adjuk meg, az alap értékek csak átlagban működnek, azért async, hogy közben más mozgás is le tudjon futni
-    if timeout != None: #ha a timeoutnak van értéke
-        timeout_watch = StopWatch() #akkor létrehozunk egy timeout_watch nevű stoppert és ez később azt jelzi, hogy mennyi ideig van elakva a robot
-        timeout_watch.reset() #akkor lenullázza a stoppert
-        timeout_watch.resume() #akkor elindítja a stoppert
-    alap_fok = hub.imu.heading() #létrehozunk egy alap_fok nevű változót aminek a gyro értéket adunk és ez később azt jelzi, hogy ebből számoljuk a tévedést
-    global irany #engedélyezzük a függvénynek az irany változó használatát a függvényen belül
-    cel_fok = irany+fok #létrehozunk egy cel_fok nevű változót aminek az irany + fok értéket adunk és ez később azt jelzi, hogy ebből számoljuk a tévedést, mert ez adja meg az elméleti fokot
-    irany = cel_fok #az irány változónak a cel_fok értéket adjuk meg
-    cel_fok -= alap_fok #a cel_fok legyen egyenlő a cel_fok - alap_fok, ez így korigálja hibát
-    while True: #elindítunk egy ciklust ami addig fut ameddig le nem állítjuk
-        if timeout != None and timeout_watch.time() >= timeout: #ha van a timeoutnak értéke és a stopper átlépte ezt az értéket
-            break #akkor lépjen ki a ciklusból  
-        megtett_fokok = hub.imu.heading() - alap_fok #létrehozunk egy megtett_fokok nevű változót aminek a gyro - alap_fok értéket adunk és ez később azt jelzi, hogy ebből számoljuk a tévedést, mert ez lesz a megtett távolság
-        hatralevo_fokok = cel_fok - megtett_fokok #létrehozunk egy hatralevo_fokok nevű változót aminek a cel_fok - megtett_fokok értéket adunk és ez később azt jelzi, hogy ebből számoljuk a tévedést, mert ez lesz a hátralévő távolság
-        jelzo = hatralevo_fokok/abs(hatralevo_fokok) #létrehozunk egy jelzo nevű változót aminek hatralevo_fokok és annak az abszolut értékje osztva értéket adunk és ez később azt jelzi, hogy előre vagy hátra kell mennie a robotnak
-        hatralevo_fokok = abs(hatralevo_fokok) #az e_hatralevo_fokok abszolut értéke legyen az e_hatralevo_fokok, azért kell hogy pozitiv legyen és a jelző már eltárolta, hogy negativ vagy pozitiv és később pozitivan számolunk vele
-        if hatralevo_fokok <= 0.5: #ha e_hatralevo_fokok kevesebb, mint 3 motorfok(ha már elég közel van a célhoz)
-            break #akkor lépjen ki a ciklusból
-        if hatralevo_fokok < lassitas : #ha az hatralevo_fokok kevesebb, mint az lassitas(ha már a lassításba van)
-            ratio = hatralevo_fokok / lassitas #akkor létrehozunk egy ratio nevű változót aminek hatralevp_fokok / lassitas értéket adunk és ez később azt jelzi, hogy hogy milyen gyorsan és melyen mértékbe lassítson
-            mostani_sebesseg = max(ratio * legnagyobb_sebesseg, legkisebb_sebesseg) * jelzo #akkor létrehozunk egy mostani_sebesseg nevű változót aminek a nagyobb értéket adunk jelzo * a kettő közül ratio*legnagyobb_sebesseg vagy legkisebb_sebesseg értéket adunk és ez később azt jelzi, hogy mennyire gyorsan kanyarodjon
-        else: #ha nem az előző 
-            mostani_sebesseg = legnagyobb_sebesseg * jelzo #akkor létrehozunk egy mostani_sebesseg nevű változót aminek jelzo * legnagyobb_sebesseg értéket adunk és ez később azt jelzi, hogy mennyire gyorsan kanyarodjon
-        bal.run(-mostani_sebesseg) #a bal motoron lefutattják a -mostani_sebesseg
-        jobb.run(mostani_sebesseg) #a bal motoron lefutattják a mostani_sebesseg
-        await wait(10) #várj 10 millimásodpercet
-    bal.stop() #álljon le a bal motor
-    jobb.stop() #álljon le a jobb motor
+async def kanyarodas(fok, legnagyobb_sebesseg=360, lassitas=80, legkisebb_sebesseg=50, timeout = None):
+    if timeout != None:
+        timeout_watch = StopWatch()
+        timeout_watch.reset()
+        timeout_watch.resume()
+    alap_fok = hub.imu.heading()
+    global irany
+    cel_fok = irany+fok
+    irany = cel_fok
+    cel_fok -= alap_fok
+    while True:
+        if timeout != None and timeout_watch.time() >= timeout:
+            break
+        megtett_fokok = hub.imu.heading() - alap_fok
+        hatralevo_fokok = cel_fok - megtett_fokok
+        jelzo = hatralevo_fokok/abs(hatralevo_fokok)
+        hatralevo_fokok = abs(hatralevo_fokok)
+        if hatralevo_fokok <= 0.5:
+            break
+        if hatralevo_fokok < lassitas :
+            ratio = hatralevo_fokok / lassitas
+            mostani_sebesseg = max(ratio * legnagyobb_sebesseg, legkisebb_sebesseg) * jelzo
+        else:
+            mostani_sebesseg = legnagyobb_sebesseg * jelzo
+        bal.run(-mostani_sebesseg)
+        jobb.run(mostani_sebesseg)
+        await wait(10)
+    bal.stop()
+    jobb.stop()
 
 
-async def jobb_feltet(angle, speed=400, timeout=None): #létrehozunk egy jobb_feltet nevü függvényt, paramétereket adunk meg amit használni fogunk a függvényben, a fokot motorfokokban-be adjuk meg, az alap értékek csak átlagban működnek, azért async, hogy közben más mozgás is le tudjon futni
-    if timeout != None: #ha a timeoutnak van értéke
-        timeout_watch = StopWatch() #akkor létrehozunk egy timeout_watch nevű stoppert és ez később azt jelzi, hogy mennyi ideig van elakva a robot
-        timeout_watch.reset() #akkor lenullázza a stoppert
-        timeout_watch.resume() #akkor elindítja a stoppert
-    feltet_jobb.run_angle(speed, angle, wait=False) #a feltet_jobb motoron lefutattják a speedet és anglet
-    while not feltet_jobb.done(): #amig a feltet_jobb nincs kész(nem futott le a mozgás)
-        if timeout != None and timeout_watch.time() >= timeout: #ha van a timeoutnak értéke és a stopper átlépte ezt az értéket
-            break #akkor lépjen ki a ciklusból  
-        await wait(10) #várj 10 millimásodpercet
-    feltet_jobb.stop() #álljon le a feltét_jobb motor
+async def jobb_feltet(angle, speed=400, timeout=None):
+    if timeout != None:
+        timeout_watch = StopWatch()
+        timeout_watch.reset()
+        timeout_watch.resume()
+    feltet_jobb.run_angle(speed, angle, wait=False)
+    while not feltet_jobb.done():
+        if timeout != None and timeout_watch.time() >= timeout:
+            break
+        await wait(10)
+    feltet_jobb.stop()
  
-async def bal_feltet(angle, speed=400, timeout=None): #létrehozunk egy bal_feltet nevü függvényt, paramétereket adunk meg amit használni fogunk a függvényben, a fokot motorfokokban-be adjuk meg, az alap értékek csak átlagban működnek, azért async, hogy közben más mozgás is le tudjon futni
-    if timeout != None: #ha a timeoutnak van értéke
-        timeout_watch = StopWatch() #akkor létrehozunk egy timeout_watch nevű stoppert és ez később azt jelzi, hogy mennyi ideig van elakva a robot
-        timeout_watch.reset() #akkor lenullázza a stoppert
-        timeout_watch.resume() #akkor elindítja a stoppert
-    feltet_bal.run_angle(speed, angle, wait=False) #a feltet_bal motoron lefutattják a speedet és anglet
-    while not feltet_bal.done(): #amig a feltet_jobb nincs kész(nem futott le a mozgás)
-        if timeout != None and timeout_watch.time() >= timeout: #ha van a timeoutnak értéke és a stopper átlépte ezt az értéket
-            break #akkor lépjen ki a ciklusból 
-        await wait(10) #várj 10 millimásodpercet
-    feltet_bal.stop() #álljon le a feltét_bal motor
+async def bal_feltet(angle, speed=400, timeout=None):
+    if timeout != None:
+        timeout_watch = StopWatch()
+        timeout_watch.reset()
+        timeout_watch.resume()
+    feltet_bal.run_angle(speed, angle, wait=False)
+    while not feltet_bal.done():
+        if timeout != None and timeout_watch.time() >= timeout:
+            break
+        await wait(10)
+    feltet_bal.stop()
 
-async def bezier_gorbe(p0_x, p0_y, p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, sebesseg=200, megforditva=True): #létrehozunk egy bezier-gorbe nevü függvényt, paramétereket adunk meg amit használni fogunk a függvényben, a sebességen kívül és a megforditva kívül mindent koordináta rendszerben adjuk meg, az alap értékek csak átlagban működnek, azért async, hogy közben más mozgás is le tudjon futni, a p0_x és p0_y adja mega  kezdőpont koordinátáit, ami 0, a p3_x és p3_y adja meg a végpont koordinátáit, a többi pedig a vonzópontokat, a megfordítva az irányát jelzi
-    global irany #engedélyezzük a függvénynek az irany változó használatát a függvényen belül
-    if megforditva == True: #ha a megfordítva True
-        p0_x, p3_x = p3_x, p0_x #felcseréljük a p0_x-et és a p3_x-et
-        p0_y, p3_y = p3_y, p0_y #felcseréljük a p0_y-et és a p3_y-et
-        p1_x, p2_x = p2_x, p1_x #felcseréljük a p1_x-et és a p2_x-et
-        p1_y, p2_y = p2_y, p1_y #felcseréljük a p1_y-et és a p2_y-et
-    bezier_hossz = 0 #létrehozunk egy bezier_hossz nevű változót aminek 0 értéket adunk és ez később azt jelzi, hogy milyen hosszú a bezier-görbe
-    utolso_x = p0_x #létrehozunk egy utolso_x nevű változót aminek az első pont x koordinátája értéket adunk és ez később azt jelzi, hogy hol fejeztük be az utolsó szakaszt az 50-ből
-    utolso_y = p0_y #létrehozunk egy utolso_y nevű változót aminek az első pont y koordinátája értéket adunk és ez később azt jelzi, hogy hol fejeztük be az utolsó szakaszt az 50-ből
-    for i in range(1, 51): #fusson le a kód 50-szer(50 részre osztjuk a görbét)
-        szazalek = i / 50 #létrehozunk egy szazalek nevű változót aminek az i/50(0-1) értéket adunk és ez később azt jelzi, hogy hány százaléka van meg az útnak
-        szakasz_vege_x = (1-szazalek)**3 * p0_x + 3*(1-szazalek)**2 * szazalek * p1_x + 3*(1-szazalek) * szazalek**2 * p2_x + szazalek**3 * p3_x #létrehozunk egy szakasz_vege_x nevű változót aminek a bezier görbe szakasz végénél lévő x értéket adunk értéket adunk és ez később azt jelzi, hogy hova kéne mennie a robotnak
-        szakasz_vege_y = (1-szazalek)**3 * p0_y + 3*(1-szazalek)**2 * szazalek * p1_y + 3*(1-szazalek) * szazalek**2 * p2_y + szazalek**3 * p3_y #létrehozunk egy szakasz_vege_y nevű változót aminek a bezier görbe szakasz végénél lévő y értéket adunk értéket adunk és ez később azt jelzi, hogy hova kéne mennie a robotnak
-        bezier_hossz += sqrt((szakasz_vege_x - utolso_x)**2 + (szakasz_vege_y - utolso_y)**2) #a bezier hosszhoz hozzá adjuk a szakasz hosszát, itt pitagorasz tételt használunk, szakasz_vege_x - utolso_x(x tengely hossza=befogó) a négyzeten + szakasz_vege_y - utolso_y(y tengely hossza=befogó) a négyzeten és az egésznek a gyökét vesszük(a^2+b^2=c^2)
-        utolso_x = szakasz_vege_x #utolso_x legyen egyenlő szakasz_vege_x-szel
-        utolso_y = szakasz_vege_y #utolso_y legyen egyenlő szakasz_vege_y-szel
-    db.reset() #a db értékét 0-ra(reseteljük) állítjuk
-    while True: #elindítunk egy ciklust ami addig fut ameddig le nem állítjuk
-        megtett_ut = db.distance() #létrehozunk egy megtett_ut nevű változót aminek a db értékét adjuk értéknek és ez később azt jelzi, hogy mennyit haladtunk
-        megtett_arany = abs(megtett_ut) / bezier_hossz #létrehozunk egy megtett_arany nevű változót aminek a megtett_ut abszolútértéke osztva a bezier_hosszal értékét adjuk értéknek és ez később azt jelzi, hogy milyen aránt jöttünk
-        if megtett_arany >= 1.0: #ha a megtett_arany nagyobb vagy egyenlő mint 1(nem ért végig)
-            break #akkor lépjen ki a ciklusból  
-        szakasz_vege_x = (1-megtett_arany)**3 * p0_x + 3*(1-megtett_arany)**2 * megtett_arany * p1_x + 3*(1-megtett_arany) * megtett_arany**2 * p2_x + megtett_arany**3 * p3_x #a szakasz_vege_x a bezier görbe szakasz végénél lévő x értéket adjuk meg értéknek
-        szakasz_vege_y = (1-megtett_arany)**3 * p0_y + 3*(1-megtett_arany)**2 * megtett_arany * p1_y + 3*(1-megtett_arany) * megtett_arany**2 * p2_y + megtett_arany**3 * p3_y #a szakasz_vege_y a bezier görbe szakasz végénél lévő y értéket adjuk meg értéknek
-        kovetkezo_arany = min(megtett_arany + 0.05, 1.0) #létrehozunk egy kovetkezo_arany nevű változót aminek az kevesebbet a megtett_arany + 0,05 vagy 1.0 értéket adunk és ez később azt jelzi, hogy a következő szakasznak mi lesz az aránya
-        kovetkezo_x = (1-kovetkezo_arany)**3 * p0_x + 3*(1-kovetkezo_arany)**2 * kovetkezo_arany * p1_x + 3*(1-kovetkezo_arany) * kovetkezo_arany**2 * p2_x + kovetkezo_arany**3 * p3_x #létrehozunk egy kovetkezo_x nevű változót aminek a bezier görbe következő végénél lévő x értéket adjuk értéknek és ez később azt jelzi, hogy hova kéne mennie a robotnak
-        kovetkezo_y = (1-kovetkezo_arany)**3 * p0_y + 3*(1-kovetkezo_arany)**2 * kovetkezo_arany * p1_y + 3*(1-kovetkezo_arany) * kovetkezo_arany**2 * p2_y + kovetkezo_arany**3 * p3_y #létrehozunk egy kovetkezo_y nevű változót aminek a bezier görbe következő végénél lévő y értéket adjuk értéknek és ez később azt jelzi, hogy hova kéne mennie a robotnak
-        tavolsag_x = kovetkezo_x - szakasz_vege_x #létrehozunk egy tavolsag_x nevű változót aminek a kovetkezo_x - szakasz_vege_x értéket adunk és ez később azt jelzi, hogy mennyit kell menni az x tengelyen
-        tavolsag_y = kovetkezo_y - szakasz_vege_y #létrehozunk egy tavolsag_y nevű változót aminek a kovetkezo_y - szakasz_vege_y értéket adunk és ez később azt jelzi, hogy mennyit kell menni az y tengelyen
-        if megforditva == True: #ha a megfordítva True
-            elvart_szog = -degrees(atan2(-tavolsag_x, -tavolsag_y)) #létrehozunk egy elvart_szog nevű változót aminek a tavolsag_x és tavolsag_y ellentetjeiből radiant számolunk, amit a degrees átvált fokokraés az egész -, mert a robot és a matek másik irányba értéket adunk és ez később azt jelzi, hogy merre kéne néznie/mennie a robotnak
-        else: #ha nem az előző
-            elvart_szog = -degrees(atan2(tavolsag_x, tavolsag_y)) #létrehozunk egy elvart_szog nevű változót aminek a tavolsag_x-ból és tavolsag_y-ból radiant számolunk, amit a degrees átvált fokokra és az egész -, mert a robot és a matek másik irányba értéket adunk és ez később azt jelzi, hogy merre kéne néznie/mennie a robotnak
-        aktualis_szog = -hub.imu.heading() #létrehozunk egy aktualis_szog nevű változót aminek a gyro ellentétét értéket adunk és ez később azt jelzi, hogy mennyit téved a robot
-        szog_elteres = elvart_szog - aktualis_szog #létrehozunk egy szog_elteres nevű változót aminek a elvart_szog - aktualis_szog értéket adunk és ez később azt jelzi, hogy mennyit tévedt a robot
-        szog_elteres = (szog_elteres + 180) % 360 - 180 #a szog_elteresnek a szogleteres + 180 maradéka 360 - 180, emiatt a legközelebb kanyarodik
-        kanyar_sebesseg = szog_elteres * 4.0 #létrehozunk egy kanyar_sebesseg nevű változót aminek a szog_elteres * 4 értéket adunk és ez később azt jelzi, hogy mennyivel korigáljon a robot
-        kanyar_sebesseg = max(min(kanyar_sebesseg, 65), -65) #a kanyar_sebesseg legyen -65 - 65 között
-        if megforditva == True: #ha a megfordítva True
-            aktualis_sebesseg = -sebesseg #létrehozunk egy aktualis_sebesseg nevű változót aminek a sebesség ellentétjét adunk és ez később azt jelzi, hogy mennyivel menjen a robot
-        else: #ha nem az előző
-            aktualis_sebesseg = sebesseg #létrehozunk egy aktualis_sebesseg nevű változót aminek a sebesség adunk és ez később azt jelzi, hogy mennyivel menjen a robot
-        db.drive(speed=aktualis_sebesseg, turn_rate=kanyar_sebesseg) #a db futassuk le az aktuális sebességet, és a kanyarodási ráta legyen a kanyar_sebesseg
-        await wait(10) #várj 10 millimásodpercet
-    db.stop() #álljon le a db(DriveBase)
-    irany = hub.imu.heading() #az irány legyen a gyro értéke
+async def bezier_gorbe(p0_x, p0_y, p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, sebesseg=200, megforditva=True):
+    global irany
+    if megforditva == True:
+        p0_x, p3_x = p3_x, p0_x
+        p0_y, p3_y = p3_y, p0_y
+        p1_x, p2_x = p2_x, p1_x
+        p1_y, p2_y = p2_y, p1_y
+    bezier_hossz = 0
+    utolso_x = p0_x
+    utolso_y = p0_y
+    for i in range(1, 51):
+        szazalek = i / 50
+        szakasz_vege_x = (1-szazalek)**3 * p0_x + 3*(1-szazalek)**2 * szazalek * p1_x + 3*(1-szazalek) * szazalek**2 * p2_x + szazalek**3 * p3_x
+        szakasz_vege_y = (1-szazalek)**3 * p0_y + 3*(1-szazalek)**2 * szazalek * p1_y + 3*(1-szazalek) * szazalek**2 * p2_y + szazalek**3 * p3_y
+        bezier_hossz += sqrt((szakasz_vege_x - utolso_x)**2 + (szakasz_vege_y - utolso_y)**2)
+        utolso_x = szakasz_vege_x
+        utolso_y = szakasz_vege_y
+    db.reset()
+    while True:
+        megtett_ut = db.distance()
+        megtett_arany = abs(megtett_ut) / bezier_hossz
+        if megtett_arany >= 1.0:
+            break
+        szakasz_vege_x = (1-megtett_arany)**3 * p0_x + 3*(1-megtett_arany)**2 * megtett_arany * p1_x + 3*(1-megtett_arany) * megtett_arany**2 * p2_x + megtett_arany**3 * p3_x
+        szakasz_vege_y = (1-megtett_arany)**3 * p0_y + 3*(1-megtett_arany)**2 * megtett_arany * p1_y + 3*(1-megtett_arany) * megtett_arany**2 * p2_y + megtett_arany**3 * p3_y
+        kovetkezo_arany = min(megtett_arany + 0.05, 1.0)
+        kovetkezo_x = (1-kovetkezo_arany)**3 * p0_x + 3*(1-kovetkezo_arany)**2 * kovetkezo_arany * p1_x + 3*(1-kovetkezo_arany) * kovetkezo_arany**2 * p2_x + kovetkezo_arany**3 * p3_x
+        kovetkezo_y = (1-kovetkezo_arany)**3 * p0_y + 3*(1-kovetkezo_arany)**2 * kovetkezo_arany * p1_y + 3*(1-kovetkezo_arany) * kovetkezo_arany**2 * p2_y + kovetkezo_arany**3 * p3_y
+        tavolsag_x = kovetkezo_x - szakasz_vege_x
+        tavolsag_y = kovetkezo_y - szakasz_vege_y
+        if megforditva == True:
+            elvart_szog = -degrees(atan2(-tavolsag_x, -tavolsag_y))
+        else:
+            elvart_szog = -degrees(atan2(tavolsag_x, tavolsag_y))
+        aktualis_szog = -hub.imu.heading()
+        szog_elteres = elvart_szog - aktualis_szog
+        szog_elteres = (szog_elteres + 180) % 360 - 180
+        kanyar_sebesseg = szog_elteres * 4.0
+        kanyar_sebesseg = max(min(kanyar_sebesseg, 65), -65)
+        if megforditva == True:
+            aktualis_sebesseg = -sebesseg
+        else:
+            aktualis_sebesseg = sebesseg
+        db.drive(speed=aktualis_sebesseg, turn_rate=kanyar_sebesseg)
+        await wait(10)
+    db.stop()
+    irany = hub.imu.heading()
 
-hub.system.set_stop_button(Button.BLUETOOTH) #beállítjuk a bluetooth gombot stop gombnak
-hub.display.number(1) #az agy írja ki az 1-es számot
-voltage = hub.battery.voltage() #létrehozunk egy voltage nevű változót aminek az agy töltöttségi szintjét adjuk értéknek és ez később azt jelzi, hogy mennyire van feltöltve a robot
-print(voltage) #az agy írja ki a voltage-ot
+hub.system.set_stop_button(Button.BLUETOOTH)
+hub.display.number(1)
+voltage = hub.battery.voltage()
+print(voltage)
 
-async def futas_1(): #létrehozunk egy futas_1 nevü függvényt, azért async, hogy közben más mozgás is le tudjon futni
-    hub.imu.reset_heading(0) #a gyro értékét 0-ra állítjuk
-    bal.reset_angle(0) #a bal szögét 0-ra állítjuk
-    jobb.reset_angle(0) #a jobb szögét 0-ra állítjuk
-    await wait(200) #várj 200 millimásodpercet
+async def futas_1():
+    hub.imu.reset_heading(0)
+    bal.reset_angle(0)
+    jobb.reset_angle(0)
+    await wait(200)
     await bezier_gorbe(0, 0, 100, 500, 200, 10, 300, 50, 200, True)
 
-async def futas_2(): #létrehozunk egy futas_2 nevü függvényt, azért async, hogy közben más mozgás is le tudjon futni
-    hub.imu.reset_heading(0) #a gyro értékét 0-ra állítjuk
-    bal.reset_angle(0) #a bal szögét 0-ra állítjuk
-    jobb.reset_angle(0) #a jobb szögét 0-ra állítjuk
-    await wait(200) #várj 200 millimásodpercet
+async def futas_2():
+    hub.imu.reset_heading(0)
+    bal.reset_angle(0)
+    jobb.reset_angle(0)
+    await wait(200)
  
-async def futas_3(): #létrehozunk egy futas_3 nevü függvényt, azért async, hogy közben más mozgás is le tudjon futni
-    hub.imu.reset_heading(0) #a gyro értékét 0-ra állítjuk
-    bal.reset_angle(0) #a bal szögét 0-ra állítjuk
-    jobb.reset_angle(0) #a jobb szögét 0-ra állítjuk
-    await wait(200) #várj 200 millimásodpercet
+async def futas_3():
+    hub.imu.reset_heading(0)
+    bal.reset_angle(0)
+    jobb.reset_angle(0)
+    await wait(200)
 
-async def futas_4(): #létrehozunk egy futas_4 nevü függvényt, azért async, hogy közben más mozgás is le tudjon futni
-    hub.imu.reset_heading(0) #a gyro értékét 0-ra állítjuk
-    bal.reset_angle(0) #a bal szögét 0-ra állítjuk
-    jobb.reset_angle(0) #a jobb szögét 0-ra állítjuk
-    await wait(200) #várj 200 millimásodpercet
+async def futas_4():
+    hub.imu.reset_heading(0)
+    bal.reset_angle(0)
+    jobb.reset_angle(0)
+    await wait(200)
 
-async def futas_5(): #létrehozunk egy futas_5 nevü függvényt, azért async, hogy közben más mozgás is le tudjon futni
-    hub.imu.reset_heading(0) #a gyro értékét 0-ra állítjuk
-    bal.reset_angle(0) #a bal szögét 0-ra állítjuk
-    jobb.reset_angle(0) #a jobb szögét 0-ra állítjuk
-    await wait(200) #várj 200 millimásodpercet
+async def futas_5():
+    hub.imu.reset_heading(0)
+    bal.reset_angle(0)
+    jobb.reset_angle(0)
+    await wait(200)
 
-async def futas_6(): #létrehozunk egy futas_0 nevü függvényt, azért async, hogy közben más mozgás is le tudjon futni
-    hub.imu.reset_heading(0) #a gyro értékét 0-ra állítjuk
-    bal.reset_angle(0) #a bal szögét 0-ra állítjuk
-    jobb.reset_angle(0) #a jobb szögét 0-ra állítjuk
-    await wait(200) #várj 200 millimásodpercet
+async def futas_6():
+    hub.imu.reset_heading(0)
+    bal.reset_angle(0)
+    jobb.reset_angle(0)
+    await wait(200)
 
-futas = 0 #létrehozunk egy futas nevű változót aminek 0 értéket adunk és ez később azt jelzi, hogy melyik futásnál tart a robot
-futasok = [futas_1, futas_2, futas_3, futas_4, futas_5, futas_6] #létrehozunk egy futasok nevű tömböt aminek futas_0, futas_1, futas_2, futas_3, futas_4, futas_5 értéket adunk és ez később azt jelzi, hogy melyik futások vannak
-max_futas = len(futasok) #létrehozunk egy max_futas nevű változót aminek a futasok tömb nagyságát adjuk értéknek és ez később azt jelzi, hogy hány futásunk van és az 5. futásról a 0-ra menjen
+futas = 0
+futasok = [futas_1, futas_2, futas_3, futas_4, futas_5, futas_6]
+max_futas = len(futasok)
  
-while True: #elindítunk egy ciklust ami addig fut ameddig le nem állítjuk
-    hub.display.number(futas + 1) #az agy írja ki a futas+1 számot
-    megnyomva = [] #létrehozunk egy megnyomva nevű tömböt aminek üres értéket adunk és ez később azt jelzi, hogy melyik gombok vannak megnyomva
-    while not any(megnyomva): #amig nincs semmi a megnyomva tömbben
-        megnyomva = hub.buttons.pressed() #a megnyomott gomb legyen a megnyomva tömmben 
-        wait(10) #várj 10 millimásodpercet
+while True:
+    hub.display.number(futas + 1)
+    megnyomva = []
+    while not any(megnyomva):
+        megnyomva = hub.buttons.pressed()
+        wait(10)
     
-    lenyomott = StopWatch() #létrehozunk egy lenyomott nevű stoppert és ez később azt jelzi, hogy mennyi ideig nyomjuk meg a gombot
-    rezgett = False #létrehozunk egy rezgett nevű változót aminek False értéket adunk meg és ez később azt jelzi, hogy rezgett e a feltét
-    while hub.buttons.pressed(): #amig levan nyomva egy gomb
-        if lenyomott.time() > 500: #ha a lenyomott stopper átlépte a fél másodpercet
-            rezgett = True #a rezgett változót True-ra állítjuk
-            feltet_bal.run_angle(900, 45, wait=False) #a feltet_bal motoron lefutattják a speedet és anglet
-            feltet_jobb.run_angle(900, 45, wait=False)  #a feltet_jobb motoron lefutattják a speedet és anglet
-            while not feltet_bal.done(): #amig a feltet_bal nincs kész(nem futott le a mozgás)
-                wait(10) #várj 10 millimásodpercet
-            feltet_bal.run_angle(900, -45, wait=False) #a feltet_bal motoron lefutattják a speedet és anglet
-            feltet_jobb.run_angle(900, -45, wait=False) #a feltet_jobb motoron lefutattják a speedet és anglet
-            while not feltet_bal.done(): #amig a feltet_jobb nincs kész(nem futott le a mozgás)
-                wait(10) #várj 10 millimásodpercet
-        wait(10) #várj 10 millimásodpercet
+    lenyomott = StopWatch()
+    rezgett = False
+    while hub.buttons.pressed():
+        if lenyomott.time() > 500:
+            rezgett = True
+            feltet_bal.run_angle(900, 45, wait=False)
+            feltet_jobb.run_angle(900, 45, wait=False) 
+            while not feltet_bal.done():
+                wait(10)
+            feltet_bal.run_angle(900, -45, wait=False)
+            feltet_jobb.run_angle(900, -45, wait=False)
+            while not feltet_bal.done():
+                wait(10)
+        wait(10)
     
-    if rezgett == True: #ha a rezgett változó True
-        wait(200) #akkor várj 200 millimásodpercet
-        continue #ugorjon a következő részre
-    if Button.RIGHT in megnyomva: #ha a jobb gomb benne van a megnyomva tömbben
-        futas = (futas + 1) % max_futas #akkor a futás legyen egyenlő futás + 1 maradéka a maxfutassal
-    if Button.LEFT in megnyomva: #ha a bal gomb benne van a megnyomva tömbben
-        futas = (futas - 1) % max_futas #akkor a futás legyen egyenlő futás - 1 maradéka a maxfutassal
-    if Button.CENTER in megnyomva: #ha a középső gomb benne van a megnyomva tömbben
-        irany = 0 #az irányt beállítjuk 0-ra(reseteljük)
-        hub.imu.reset_heading(0) #a gyro értékét 0-ra állítjuk
-        while Button.CENTER in hub.buttons.pressed(): #amig a középső gomb meg van nyomva
-            wait(10) #várj 10 millimásodpercet
-        try: #próbáld meg lefutatni a következő kódrészletet, ha bármikor ki lép a kódból(systemexit) menj az exceptre
-            hub.system.set_stop_button(Button.CENTER) #beállítjuk a középső gombot stop gombra
-            if elindult_timer == False and futas == 0: #ha az elindult:timer False és a futás 0 van
-                meccs_ora = StopWatch() #létrehozunk egy meccs_ora nevű stoppert és ez később azt jelzi, hogy mennyi ideje fut a robot
-                meccs_ora.reset() #akkor lenullázza a stoppert
-                meccs_ora.resume() #akkor elindítja a stoppert
-                elindult_timer = True #akkor az elindult_timer legyen True
-            run_task(futasok[futas]()) #futassa le a futásoktömb futasadik elemét 
-            futas = (futas + 1) % max_futas #a futás legyen egyenlő futás + 1 maradéka a maxfutassal
-        except SystemExit: #ha volt systemexit(kilépett) a tryban jöjjön ide
-            while Button.CENTER in hub.buttons.pressed(): #amig a középső gomb meg van nyomva
-                wait(10) #várj 10 millimásodpercet
-            bal.stop() #álljon le a bal motor
-            jobb.stop() #álljon le a jobb motor
-            feltet_bal.stop() #álljon le a feltet_bal motor
-            feltet_jobb.stop() #álljon le a feltet_jobb motor
-        hub.system.set_stop_button(Button.BLUETOOTH) #beállítjuk a bluetooth gombot stop gombra
-    wait(10) #várj 10 millimásodpercet
+    if rezgett == True:
+        wait(200)
+        continue
+    if Button.RIGHT in megnyomva:
+        futas = (futas + 1) % max_futas
+    if Button.LEFT in megnyomva:
+        futas = (futas - 1) % max_futas
+    if Button.CENTER in megnyomva:
+        irany = 0
+        hub.imu.reset_heading(0)
+        while Button.CENTER in hub.buttons.pressed():
+            wait(10)
+        try:
+            hub.system.set_stop_button(Button.CENTER)
+            if elindult_timer == False and futas == 0:
+                meccs_ora = StopWatch()
+                meccs_ora.reset()
+                meccs_ora.resume()
+                elindult_timer = True
+            run_task(futasok[futas]())
+            futas = (futas + 1) % max_futas
+        except SystemExit:
+            while Button.CENTER in hub.buttons.pressed():
+                wait(10)
+            bal.stop()
+            jobb.stop()
+            feltet_bal.stop()
+            feltet_jobb.stop()
+        hub.system.set_stop_button(Button.BLUETOOTH)
+    wait(10)
